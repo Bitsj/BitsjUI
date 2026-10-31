@@ -1,0 +1,46 @@
+## Interface: 120100, 120105, 120107, 120200, 16001
+## Title: |cff4fd1b5Bitsj|rUI
+## Notes: Clean drag and drop UI with its own config menu. Type /bui
+## Author: Bitsj
+## Version: 3.3.0
+## Category: User Interface
+## IconTexture: Interface\AddOns\BitsjUI\Media\Textures\Logo
+## SavedVariables: BitsjUIDB
+## SavedVariablesPerCharacter: BitsjUICharDB
+## AddonCompartmentFunc: BitsjUI_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: BitsjUI_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: BitsjUI_OnAddonCompartmentLeave
+
+Core\Init.lua
+Core\Defaults.lua
+Core\Media.lua
+Core\Skin.lua
+Core\Auras.lua
+Core\Templates.xml
+Core\Movers.lua
+Core\Profiles.lua
+Modules\General.lua
+Modules\ActionBars.lua
+Modules\UnitFrames.lua
+Modules\RaidFrames.lua
+Modules\ClassPower.lua
+Modules\Timers.lua
+Modules\Buffs.lua
+Modules\Castbars.lua
+Modules\Swing.lua
+Modules\Nameplates.lua
+Modules\Minimap.lua
+Modules\Chat.lua
+Modules\Tooltip.lua
+Modules\CooldownManager.lua
+Modules\MeterData.lua
+Modules\DamageMeter.lua
+Modules\QoL.lua
+Modules\Bags.lua
+Modules\Character.lua
+Modules\Friends.lua
+Modules\Quests.lua
+Modules\Update.lua
+Config\Widgets.lua
+Config\Config.lua
+Config\Installer.lua

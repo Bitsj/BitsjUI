@@ -1,0 +1,532 @@
+--[[
+	BitsjUI - Media & skin helpers
+	Fonts, statusbar textures, borders and backdrops.
+]]
+local _, B = ...
+
+local path = B.mediaPath
+
+B.media = {
+	fonts = {
+		-- Barlow Semi Condensed: free (OFL) and the closest match to Expressway
+		["Barlow"] = path .. "Fonts\\BarlowSemiCondensed-SemiBold.ttf",
+		["Inter"] = path .. "Fonts\\Inter-SemiBold.ttf",
+		["Outfit"] = path .. "Fonts\\Outfit-Bold.ttf",
+		["Instrument Sans"] = path .. "Fonts\\InstrumentSans-Bold.ttf",
+		["Big Shoulders"] = path .. "Fonts\\BigShoulders-Bold.ttf",
+		["Friz Quadrata"] = "Fonts\\FRIZQT__.TTF",
+		["Arial Narrow"] = "Fonts\\ARIALN.TTF",
+		["Morpheus"] = "Fonts\\MORPHEUS.TTF",
+		["Skurri"] = "Fonts\\SKURRI.TTF",
+		-- drop your own font into Media\Fonts\Custom.ttf and pick this
+		["Custom (Custom.ttf)"] = path .. "Fonts\\Custom.ttf",
+	},
+	textures = {
+		["Bitsj Gloss"] = path .. "Textures\\Gloss",
+		["Bitsj Smooth"] = path .. "Textures\\Smooth",
+		["Bitsj Glass"] = path .. "Textures\\Glass",
+		["Bitsj Stripes"] = path .. "Textures\\Stripes",
+		["Flat"] = B.white,
+		["Blizzard"] = "Interface\\TargetingFrame\\UI-StatusBar",
+		["Blizzard Raid"] = "Interface\\RaidFrame\\Raid-Bar-Hp-Fill",
+	},
+}
+
+B.outlines = {
+	{ value = "NONE", label = "None" },
+	{ value = "OUTLINE", label = "Outline" },
+	{ value = "THICKOUTLINE", label = "Thick outline" },
+	{ value = "MONOCHROME,OUTLINE", label = "Pixel outline" },
+}
+
+-- Pull in LibSharedMedia (if another addon ships it) and register ours there too
+local function GetLSM()
+	return LibStub and LibStub("LibSharedMedia-3.0", true)
+end
+
+function B:RegisterSharedMedia()
+	local LSM = GetLSM()
+	if not LSM then return end
+	-- LSM rejects (and errors on) font files that don't exist, e.g. Expressway
+	-- before the user has added it, so only hand over fonts that really load
+	for name, file in pairs(self.media.fonts) do
+		if not name:find("Custom") and B.FontWorks(file) then
+			pcall(LSM.Register, LSM, "font", "Bitsj " .. name, file)
+		end
+	end
+	for name, file in pairs(self.media.textures) do
+		if name:find("Bitsj") then pcall(LSM.Register, LSM, "statusbar", name, file) end
+	end
+end
+
+function B:GetFontList()
+	local list, seen = {}, {}
+	for name in pairs(self.media.fonts) do list[#list + 1] = name; seen[name] = true end
+	local LSM = GetLSM()
+	if LSM then
+		for _, name in ipairs(LSM:List("font")) do
+			if not seen[name] and not name:find("^Bitsj ") then list[#list + 1] = name end
+		end
+	end
+	table.sort(list)
+	return list
+end
+
+function B:GetTextureList()
+	local list, seen = {}, {}
+	for name in pairs(self.media.textures) do list[#list + 1] = name; seen[name] = true end
+	local LSM = GetLSM()
+	if LSM then
+		for _, name in ipairs(LSM:List("statusbar")) do
+			if not seen[name] then list[#list + 1] = name end
+		end
+	end
+	table.sort(list)
+	return list
+end
+
+-- font probing: a missing Custom.ttf must never leave text invisible
+local probe
+local fontOK = {}
+function B.FontWorks(file)
+	if fontOK[file] ~= nil then return fontOK[file] end
+	probe = probe or UIParent:CreateFontString(nil, "BACKGROUND")
+	probe:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+	local ok, result = pcall(probe.SetFont, probe, file, 12, "")
+	local current = probe:GetFont()
+	-- SetFont returns false on a missing file in modern clients
+	ok = ok and result ~= false and current ~= nil and current:lower():gsub("/", "\\") == file:lower()
+	-- and a font that really loaded draws visible text
+	if ok then
+		probe:SetText("Expressway 123")
+		local w = probe:GetStringWidth()
+		ok = (w or 0) > 1
+	end
+	fontOK[file] = ok
+	return ok
+end
+
+function B:GetFont(name)
+	name = name or self.db.general.font
+	local file = self.media.fonts[name]
+	if not file then
+		local LSM = GetLSM()
+		file = LSM and LSM:Fetch("font", name, true)
+	end
+	if not file or not B.FontWorks(file) then
+		file = self.media.fonts["Inter"]
+		if not B.FontWorks(file) then file = "Fonts\\FRIZQT__.TTF" end
+	end
+	return file
+end
+
+function B:GetTexture(name)
+	name = name or self.db.general.texture
+	local file = self.media.textures[name]
+	if not file then
+		local LSM = GetLSM()
+		file = LSM and LSM:Fetch("statusbar", name, true)
+	end
+	return file or B.white
+end
+
+-- "SLUG" makes the client draw text as smooth vectors instead of a small
+-- bitmap, which keeps it sharp at UI scales like 0.62 on 1440p
+local slugOK
+local function SlugSupported()
+	if slugOK ~= nil then return slugOK end
+	local fs = UIParent:CreateFontString(nil, "BACKGROUND")
+	local ok, res = pcall(fs.SetFont, fs, "Fonts\\FRIZQT__.TTF", 12, "SLUG")
+	slugOK = ok and res ~= false
+	return slugOK
+end
+
+-- add the quality flag to a set of font flags
+function B:Flags(flags)
+	flags = flags or ""
+	local g = self.db and self.db.general
+	if g and g.sharpText and SlugSupported() and not flags:find("SLUG", 1, true) then
+		flags = (flags == "") and "SLUG" or (flags .. ",SLUG")
+	end
+	return flags
+end
+
+function B:GetOutline()
+	local o = self.db.general.fontOutline
+	if o == "NONE" then o = "" end
+	return self:Flags(o)
+end
+
+-- apply BitsjUI font to a fontstring
+function B:SetFont(fs, size, outline)
+	if not fs or not fs.SetFont then return end
+	fs:SetFont(self:GetFont(), size or 12, outline and self:Flags(outline) or self:GetOutline())
+	if self.db.general.fontShadow then
+		fs:SetShadowColor(0, 0, 0, 1)
+		fs:SetShadowOffset(1, -1)
+	else
+		fs:SetShadowOffset(0, 0)
+	end
+end
+
+function B:CreateText(parent, size, justify, layer)
+	local fs = parent:CreateFontString(nil, layer or "OVERLAY")
+	self:SetFont(fs, size)
+	fs:SetJustifyH(justify or "CENTER")
+	fs:SetWordWrap(false)
+	self.fontStrings = self.fontStrings or setmetatable({}, { __mode = "k" })
+	self.fontStrings[fs] = size or 12
+	return fs
+end
+
+-- re-apply the font to every fontstring we created (after font change)
+function B:RefreshFonts()
+	if not self.fontStrings then return end
+	for fs, size in pairs(self.fontStrings) do
+		self:SetFont(fs, fs.bSize or size)
+	end
+end
+
+-------------------------------------------------------------------------------
+-- Icons: one look everywhere (crop, inner shadow, soft gloss)
+-------------------------------------------------------------------------------
+local skinnedIcons = setmetatable({}, { __mode = "k" })
+
+local function ApplyIcon(icon)
+	local g = B.db and B.db.general or {}
+	local z = g.iconZoom or 0.08
+	icon:SetTexCoord(z, 1 - z, z, 1 - z)
+	-- aura icons report a hidden (secret) value here; their whole button hides anyway
+	local visible = B.Plain(icon:IsShown(), true)
+	if icon.bShadow then
+		icon.bShadow:SetAlpha(g.iconShadow or 0)
+		icon.bShadow:SetShown(visible and (g.iconShadow or 0) > 0)
+	end
+	if icon.bGloss then
+		icon.bGloss:SetAlpha(g.iconGloss or 0)
+		icon.bGloss:SetShown(visible and (g.iconGloss or 0) > 0)
+	end
+end
+
+-- icon: the texture; owner: frame to put the overlays on (defaults to its parent)
+function B:SkinIcon(icon, owner)
+	if not icon or (icon.IsForbidden and icon:IsForbidden()) then return end
+	owner = owner or icon:GetParent()
+	if not icon.bShadow and owner and owner.CreateTexture then
+		local layer, sub = icon:GetDrawLayer()
+		sub = math.min(7, (sub or 0) + 1)
+		icon.bShadow = owner:CreateTexture(nil, layer or "ARTWORK", nil, sub)
+		icon.bShadow:SetTexture(path .. "Textures\\IconShadow")
+		icon.bShadow:SetAllPoints(icon)
+		icon.bGloss = owner:CreateTexture(nil, layer or "ARTWORK", nil, math.min(7, sub + 1))
+		icon.bGloss:SetTexture(path .. "Textures\\IconGloss")
+		icon.bGloss:SetBlendMode("ADD")
+		icon.bGloss:SetAllPoints(icon)
+		-- overlays live on the owner, so follow the icon (empty action slots hide it)
+		local function follow()
+			if B.Plain(icon:IsShown(), true) then pcall(ApplyIcon, icon) else icon.bShadow:Hide(); icon.bGloss:Hide() end
+		end
+		hooksecurefunc(icon, "Show", follow)
+		hooksecurefunc(icon, "Hide", follow)
+		hooksecurefunc(icon, "SetShown", follow)
+	end
+	skinnedIcons[icon] = true
+	ApplyIcon(icon)
+end
+
+-- keep the overlays in step with the icon's visibility
+function B:RefreshIcons()
+	for icon in pairs(skinnedIcons) do pcall(ApplyIcon, icon) end
+end
+
+-------------------------------------------------------------------------------
+-- Theme: the UI takes on the colours of whoever you log in as
+-------------------------------------------------------------------------------
+local FACTION_COLORS = {
+	Alliance = { 0.26, 0.52, 1.00 },
+	Horde = { 0.90, 0.18, 0.14 },
+	Neutral = { 0.95, 0.78, 0.30 },
+}
+B.FACTION_COLORS = FACTION_COLORS
+
+-- who you are right now (name, class, race, faction) for theming
+function B:Identity()
+	local _, class = UnitClass("player")
+	local className = UnitClass("player")
+	local race = UnitRace("player")
+	local faction, factionName = UnitFactionGroup("player")
+	return {
+		name = B.Plain(UnitName("player"), ""), class = class, className = className, race = race,
+		faction = faction or "Neutral", factionName = factionName or faction or "",
+	}
+end
+
+-- "BitsjUI" with "Bitsj" in the theme colour
+function B:TitleText()
+	local r, g, b = self:AccentColor()
+	return string.format("|cff%02x%02x%02xBitsj|rUI", math.floor(r * 255), math.floor(g * 255), math.floor(b * 255))
+end
+
+function B:FactionColor()
+	local faction = UnitFactionGroup and UnitFactionGroup("player")
+	local c = FACTION_COLORS[faction or "Neutral"] or FACTION_COLORS.Neutral
+	return c[1], c[2], c[3]
+end
+
+function B:AccentColor()
+	local g = self.db and self.db.general
+	local mode = g and g.themeMode or "class"
+	if mode == "class" then
+		local _, class = UnitClass("player")
+		if class then return self:ClassColor(class) end
+	elseif mode == "faction" then
+		return self:FactionColor()
+	end
+	local c = g and g.accent or { r = 0.31, g = 0.82, b = 0.71 }
+	return c.r, c.g, c.b
+end
+
+-- panel background with a faint wash of the theme colour
+function B:PanelColor(alpha)
+	local g = self.db.general
+	local c = g.backdrop
+	local t = g.themeTint or 0
+	local r, gg, b = self:AccentColor()
+	return c.r + (r - c.r) * t, c.g + (gg - c.g) * t, c.b + (b - c.b) * t, alpha or c.a
+end
+
+-- default border colour: black, or a deep shade of the theme colour
+function B:BorderColor()
+	local g = self.db and self.db.general
+	if g and g.themeBorders then
+		local r, gg, b = self:AccentColor()
+		return r * 0.32, gg * 0.32, b * 0.32, 1
+	end
+	local c = g and g.border or { r = 0, g = 0, b = 0, a = 1 }
+	return c.r, c.g, c.b, c.a
+end
+
+function B:ClassColor(class)
+	if not class then return 1, 1, 1 end
+	local c = (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class))
+		or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
+	if c then return c.r, c.g, c.b end
+	return 1, 1, 1
+end
+
+-------------------------------------------------------------------------------
+-- Borders / backdrops (pixel perfect, 1 physical pixel)
+-------------------------------------------------------------------------------
+local bordered = setmetatable({}, { __mode = "k" })
+
+-- Rounded corners: a quarter ring texture per corner (Media\Textures\Corners,
+-- C<radius>_<thickness>.tga, radius/thickness in physical pixels). Only for
+-- borders that sit outside their frame: the frame's square corner then always
+-- lands under the ring, so nothing pokes out of the rounding.
+local CORNER_COORDS = {
+	{ 0, 1, 0, 1 },  -- top left (as drawn)
+	{ 1, 0, 0, 1 },  -- top right
+	{ 0, 1, 1, 0 },  -- bottom left
+	{ 1, 0, 1, 0 },  -- bottom right
+}
+
+local function CornerRadius(thick)
+	local g = B.db and B.db.general
+	if not g or g.borderStyle ~= "rounded" then return 0 end
+	local r = g.cornerRadius or 4
+	-- keep the frame corner inside the ring: r <= thickness * 3.4
+	r = math.min(r, math.floor(thick * 3.4), 8)
+	if r <= thick then return 0 end
+	return r
+end
+
+local function LayoutBorder(holder)
+	local frame = holder.bOwner
+	local px = B:Pixel(frame)
+	local thick = holder.bThickness or 1
+	local p = px * thick
+	local o = holder.bOffset or 0
+	local t = holder.bTex
+	local R = o > 0 and CornerRadius(thick) or 0
+	local c = R * px
+	t[1]:ClearAllPoints(); t[1]:SetPoint("TOPLEFT", frame, "TOPLEFT", -o + c, o); t[1]:SetPoint("TOPRIGHT", frame, "TOPRIGHT", o - c, o); t[1]:SetHeight(p)
+	t[2]:ClearAllPoints(); t[2]:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -o + c, -o); t[2]:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", o - c, -o); t[2]:SetHeight(p)
+	t[3]:ClearAllPoints(); t[3]:SetPoint("TOPLEFT", frame, "TOPLEFT", -o, o - c); t[3]:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -o, -o + c); t[3]:SetWidth(p)
+	t[4]:ClearAllPoints(); t[4]:SetPoint("TOPRIGHT", frame, "TOPRIGHT", o, o - c); t[4]:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", o, -o + c); t[4]:SetWidth(p)
+
+	if R > 0 then
+		if not holder.bCorner then
+			holder.bCorner = {}
+			for i = 1, 4 do
+				local ct = holder:CreateTexture(nil, t[1]:GetDrawLayer(), nil, 7)
+				ct:SetTexCoord(unpack(CORNER_COORDS[i]))
+				local col = holder.bColor
+				ct:SetVertexColor(col[1], col[2], col[3], col[4])
+				holder.bCorner[i] = ct
+			end
+		end
+		local file = path .. "Textures\\Corners\\C" .. R .. "_" .. math.min(thick, 4)
+		local cc = holder.bCorner
+		local pts = { { "TOPLEFT", -o, o }, { "TOPRIGHT", o, o }, { "BOTTOMLEFT", -o, -o }, { "BOTTOMRIGHT", o, -o } }
+		for i = 1, 4 do
+			cc[i]:SetTexture(file)
+			cc[i]:ClearAllPoints()
+			cc[i]:SetPoint(pts[i][1], frame, pts[i][1], pts[i][2], pts[i][3])
+			cc[i]:SetSize(c, c)
+			cc[i]:Show()
+		end
+	elseif holder.bCorner then
+		for i = 1, 4 do holder.bCorner[i]:Hide() end
+	end
+end
+
+-- offset: how far outside the frame the border sits (in frame units)
+function B:CreateBorder(frame, r, g, b, a, offset, layer)
+	if frame.bBorder then return frame.bBorder end
+	local br, bg2, bb, ba = self:BorderColor()
+	local c = { r = br, g = bg2, b = bb, a = ba }
+	local holder = CreateFrame("Frame", nil, frame)
+	holder:SetAllPoints(frame)
+	holder:SetFrameLevel(frame:GetFrameLevel() + 2)
+	holder.bOwner = frame
+	holder.bOffset = offset or 0
+	holder.bTex = {}
+	for i = 1, 4 do
+		local t = holder:CreateTexture(nil, layer or "OVERLAY", nil, 7)
+		t:SetTexture(B.white)
+		if t.SetSnapToPixelGrid then t:SetSnapToPixelGrid(false); t:SetTexelSnappingBias(0) end
+		t:SetVertexColor(r or c.r, g or c.g, b or c.b, a or c.a)
+		holder.bTex[i] = t
+	end
+	holder.bColor = { r or c.r, g or c.g, b or c.b, a or c.a }
+	function holder:SetColor(cr, cg, cb, ca)
+		self.bColor = { cr, cg, cb, ca or 1 }
+		for i = 1, 4 do self.bTex[i]:SetVertexColor(cr, cg, cb, ca or 1) end
+		if self.bCorner then
+			for i = 1, 4 do self.bCorner[i]:SetVertexColor(cr, cg, cb, ca or 1) end
+		end
+	end
+	LayoutBorder(holder)
+	frame.bBorder = holder
+	bordered[holder] = true
+	return holder
+end
+
+-- dark background + 1px border sitting just outside the frame
+function B:CreateBackdrop(frame, alpha, noBorder)
+	if frame.bBackdrop then return frame.bBackdrop end
+	local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+	bg:SetTexture(B.white)
+	bg:SetVertexColor(self:PanelColor(alpha))
+	bg:SetAllPoints(frame)
+	frame.bBackdrop = bg
+	if not noBorder then
+		self:CreateBorder(frame, nil, nil, nil, nil, B:Pixel(frame))
+	end
+	return bg
+end
+
+-- thicker border sitting fully outside the frame (thickness in physical pixels)
+function B:SetBorderSize(frame, thickness)
+	local holder = frame and frame.bBorder
+	if not holder then return end
+	holder.bThickness = math.max(1, thickness or 1)
+	holder.bOffset = B:Pixel(frame) * holder.bThickness
+	LayoutBorder(holder)
+end
+
+function B:RefreshBorders()
+	for holder in pairs(bordered) do
+		if holder.bOffset and holder.bOffset > 0 then
+			holder.bOffset = B:Pixel(holder.bOwner) * (holder.bThickness or 1)
+		end
+		LayoutBorder(holder)
+	end
+end
+
+B:RegisterCallback("PIXEL_CHANGED", function() B:RefreshBorders() end)
+B:RegisterCallback("UI_SCALE_APPLIED", function() B:RefreshBorders() end)
+
+-- Bar colours go through one dial so the whole UI can be toned down:
+-- saturation pulls colours towards grey, brightness darkens them.
+function B:Soften(r, g, b)
+	local gen = self.db and self.db.general
+	if not gen or type(r) ~= "number" then return r, g, b end
+	local sat, bright = gen.colorSaturation or 1, gen.colorBrightness or 1
+	local grey = r * 0.3 + g * 0.59 + b * 0.11
+	r, g, b = grey + (r - grey) * sat, grey + (g - grey) * sat, grey + (b - grey) * sat
+	return r * bright, g * bright, b * bright
+end
+
+-- make a bar's SetStatusBarColor go through Soften (our own bars only)
+local softBars = setmetatable({}, { __mode = "k" })
+function B:SoftBar(sb)
+	if not sb or sb.bSoft then return sb end
+	sb.bSoft = true
+	local orig = sb.SetStatusBarColor
+	sb.bRawColor = { 1, 1, 1, 1 }
+	function sb:SetStatusBarColor(r, g, b, a)
+		self.bRawColor[1], self.bRawColor[2], self.bRawColor[3], self.bRawColor[4] = r, g, b, a
+		local sr, sg, sbb = B:Soften(r, g, b)
+		return orig(self, sr, sg, sbb, a)
+	end
+	softBars[sb] = true
+	return sb
+end
+
+-- re-apply after the dial moved
+function B:RefreshBarColors()
+	for sb in pairs(softBars) do
+		local c = sb.bRawColor
+		if c and type(c[1]) == "number" then sb:SetStatusBarColor(c[1], c[2], c[3], c[4]) end
+	end
+end
+
+-- simple statusbar with dark background
+function B:CreateStatusBar(parent, name)
+	local sb = CreateFrame("StatusBar", name, parent)
+	self:SoftBar(sb)
+	sb:SetStatusBarTexture(self:GetTexture())
+	sb:SetMinMaxValues(0, 1)
+	sb:SetValue(1)
+	local bg = sb:CreateTexture(nil, "BACKGROUND")
+	bg:SetTexture(self:GetTexture())
+	bg:SetAllPoints(sb)
+	bg:SetVertexColor(0.08, 0.08, 0.09, 1)
+	sb.bg = bg
+	self.statusBars = self.statusBars or setmetatable({}, { __mode = "k" })
+	self.statusBars[sb] = true
+	return sb
+end
+
+function B:RefreshTextures()
+	if not self.statusBars then return end
+	local tex = self:GetTexture()
+	for sb in pairs(self.statusBars) do
+		if not sb.bKeepTexture then
+			sb:SetStatusBarTexture(tex)
+			if sb.bg then sb.bg:SetTexture(tex) end
+		end
+	end
+end
+
+-- atlas only when the client has it (Classic lacks many modern atlases)
+function B.HasAtlas(name)
+	if not (C_Texture and C_Texture.GetAtlasInfo) then return true end
+	local ok, info = pcall(C_Texture.GetAtlasInfo, name)
+	return ok and info ~= nil
+end
+
+-- class icon: modern atlas, or the old class-icon sheet on Classic
+function B:ClassIcon(tex, class)
+	if not tex then return end
+	if not class then tex:SetTexture(nil); return end
+	local atlas = "classicon-" .. class:lower()
+	if B.HasAtlas(atlas) then
+		tex:SetAtlas(atlas)
+		return
+	end
+	local c = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[class]
+	tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+	if c then tex:SetTexCoord(c[1] + 0.015, c[2] - 0.015, c[3] + 0.015, c[4] - 0.015) end
+end

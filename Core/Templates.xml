@@ -1,0 +1,16 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
+	<!-- Player buff button for SecureAuraHeaderTemplate (Classic clients):
+	     right-click cancels the aura through Blizzard's own secure "cancelaura" action -->
+	<Button name="BitsjUIAuraTemplate" inherits="SecureActionButtonTemplate" virtual="true">
+		<Size x="30" y="30"/>
+		<Attributes>
+			<Attribute name="type2" value="cancelaura"/>
+		</Attributes>
+		<Scripts>
+			<OnLoad>
+				self:RegisterForClicks("RightButtonUp")
+				if BitsjUI_AuraButtonOnLoad then BitsjUI_AuraButtonOnLoad(self) end
+			</OnLoad>
+		</Scripts>
+	</Button>
+</Ui>
