@@ -1,3 +1,8 @@
+# BitsjUI 1.1.2
+
+## Fixed
+- The "What's new" window cut its text off after the first line. It now shows every change and grows to fit.
+
 # BitsjUI 1.1.1
 
 ## New
