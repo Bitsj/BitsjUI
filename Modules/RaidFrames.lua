@@ -227,9 +227,19 @@ local function SetUnit(b, unit)
 		byUnit[unit] = byUnit[unit] or {}
 		byUnit[unit][b] = true
 	end
+	B:Fire("RAID_BUTTONS_CHANGED")
 	if b.debuffs then B:SetAuraBoxUnit(b.debuffs, unit) end
 	if b.hots then B:SetAuraBoxUnit(b.hots, unit) end
 	UpdateAll(b)
+end
+
+-- every party / raid tile currently bound to a unit (for other addons, e.g. MiniAuras)
+function M:GetUnitButtons()
+	local out = {}
+	for _, b in ipairs(buttons) do
+		if b.unit then out[#out + 1] = b end
+	end
+	return out
 end
 
 local function StyleButton(b, kind)

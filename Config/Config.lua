@@ -312,6 +312,12 @@ pages[#pages + 1] = { key = "raidframes", label = "Party & raid", build = functi
 	lay:Add(W.Button(lay.content, "Preview raid (40)", 160, 26, function() RF:SetPreview("raid40") end))
 	lay:Add(W.Button(lay.content, "Hide preview", 140, 26, function() RF:SetPreview(nil) end))
 	lay:NewLine()
+	if _G.MiniAurasApi then
+		lay:Header("MiniAuras")
+		lay:Text("MiniAuras puts its crowd control, defensive and important-buff icons on BitsjUI's party and raid tiles. This button sets its size, placement and font to match BitsjUI (crowd control right of each party tile, defensives left of it). Reloads the UI.")
+		lay:Add(W.Button(lay.content, "Fit MiniAuras to BitsjUI", 200, 26, function() B:GetModule("MiniAuras"):ApplyLayout() end))
+		lay:NewLine()
+	end
 	O.check(lay, "BitsjUI party / raid frames *", "raidframes.enabled", "RaidFrames")
 	O.check(lay, "Hide Blizzard's party / raid frames *", "raidframes.hideBlizzard", "RaidFrames")
 

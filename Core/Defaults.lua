@@ -9,6 +9,7 @@ local _, B = ...
 
 B.globalDefaults = {
 	installed = false,
+	miniAurasStyled = false,
 	installVersion = 0,
 }
 

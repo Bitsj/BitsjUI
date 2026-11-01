@@ -31,6 +31,7 @@ Modules\Buffs.lua
 Modules\Castbars.lua
 Modules\Swing.lua
 Modules\Defensives.lua
+Modules\MiniAuras.lua
 Modules\Nameplates.lua
 Modules\Minimap.lua
 Modules\Chat.lua
