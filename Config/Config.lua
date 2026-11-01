@@ -257,6 +257,9 @@ pages[#pages + 1] = { key = "unitframes", label = "Unit frames", build = functio
 	O.slider(lay, "Health text size", "unitframes.fontSize", 8, 24, 1, "UnitFrames")
 	O.slider(lay, "Power text size", "unitframes.smallFontSize", 7, 20, 1, "UnitFrames")
 	O.slider(lay, "Name size", "unitframes.nameSize", 7, 20, 1, "UnitFrames")
+	if not B.isClassic then
+		O.check(lay, "Absorb shields", "unitframes.absorbs", "UnitFrames", "A light bar on the health bar for shields / absorbs on the unit.")
+	end
 
 	if not B.isClassic then
 		lay:Header("Cooldown Manager")
@@ -320,6 +323,9 @@ pages[#pages + 1] = { key = "raidframes", label = "Party & raid", build = functi
 	end
 	O.check(lay, "BitsjUI party / raid frames *", "raidframes.enabled", "RaidFrames")
 	O.check(lay, "Hide Blizzard's party / raid frames *", "raidframes.hideBlizzard", "RaidFrames")
+	if not B.isClassic then
+		O.check(lay, "Absorb shields", "raidframes.absorbs", "RaidFrames", "A light bar on the health bar for shields / absorbs on the unit.")
+	end
 
 	lay:Header("Settings for")
 	state.rf = state.rf or "party"
@@ -548,6 +554,7 @@ pages[#pages + 1] = { key = "nameplates", label = "Nameplates", build = function
 	O.check(lay, "Interrupt indicator", "nameplates.kickIndicator", "Nameplates",
 		"Your interrupt next to enemy castbars. Green frame: your kick is ready. Grey icon: on cooldown, with a green line on the castbar where it comes back (red icon if it won't be back before the cast ends). Hidden on casts that can't be interrupted.")
 	O.color(lay, "Interrupt ready colour", "nameplates.kickColor", "Nameplates")
+	O.slider(lay, "Interrupt icon size", "nameplates.kickSize", 10, 32, 1, "Nameplates")
 	O.check(lay, "Absorb shields", "nameplates.absorbs", "Nameplates", "A light bar on the health bar for shields / absorbs on the unit.")
 	ReloadNotice(lay)
 end }

@@ -192,14 +192,7 @@ end
 -- Midnight's hidden numbers, the status bar takes them as they are.
 -------------------------------------------------------------------------------
 local function UpdateAbsorb(np)
-	local ab = np.absorb
-	if not ab then return end
-	if not db().absorbs or not UnitGetTotalAbsorbs then ab:Hide(); return end
-	local ok, amount = pcall(UnitGetTotalAbsorbs, np.unit)
-	if not ok or amount == nil or (not issecret(amount) and amount <= 0) then ab:Hide(); return end
-	ab:SetMinMaxValues(0, UnitHealthMax(np.unit))
-	ab:SetValue(amount)
-	ab:Show()
+	B:UpdateAbsorb(np.health, np.unit, db().absorbs)
 end
 
 local function UpdateHealth(np)
@@ -414,6 +407,15 @@ local CLASSIC_KICKS = {
 }
 local kick            -- { id = spellID or name, icon = texture }
 local kickReady, kickReadyAt
+-- base cooldowns, used to guess when kick is back while Blizzard hides the
+-- real number (talents can shorten it; the green frame always shows the truth)
+local KICK_CD = {
+	[6552] = 15, [1766] = 15, [47528] = 15, [183752] = 15, [96231] = 15, [57994] = 12, [2139] = 24,
+	[147362] = 24, [187707] = 15, [116705] = 15, [106839] = 15, [78675] = 60, [15487] = 30,
+	[351338] = 20, [119910] = 24, [19647] = 24, [132409] = 24,
+	Pummel = 10, ["Shield Bash"] = 12, Kick = 10, Counterspell = 24, ["Earth Shock"] = 6, Silence = 45,
+	["Wind Shear"] = 6, ["Mind Freeze"] = 10, Rebuke = 15, ["Counter Shot"] = 24, ["Skull Bash"] = 15, ["Spear Hand Strike"] = 15,
+}
 
 local function Known(id)
 	for _, fn in ipairs({ _G.IsPlayerSpell, _G.IsSpellKnownOrOverridesKnown }) do
@@ -472,6 +474,21 @@ local function KickState()
 	return true
 end
 
+local function RefreshKick()
+	if not kick then kickReady, kickReadyAt = nil, nil; return end
+	local was = kickReady
+	local ready, at = KickState()
+	local now = GetTime()
+	if ready then
+		kick.estAt = nil
+	elseif not at then
+		-- just went on cooldown: start our own clock
+		if was == true then kick.estAt = now + (KICK_CD[kick.id] or 15) end
+		if kick.estAt and kick.estAt > now then at = kick.estAt end
+	end
+	kickReady, kickReadyAt = ready, at
+end
+
 -- show a frame / texture unless the cast can't be interrupted (flag may be hidden)
 local function ShowIfInterruptible(obj, notInt)
 	if issecret(notInt) then
@@ -483,11 +500,63 @@ local function ShowIfInterruptible(obj, notInt)
 	end
 end
 
+-- line on the castbar where kick comes back. Readable cast times: plain
+-- maths. Hidden cast times: a copy of the cast's own timer, frozen at the
+-- moment kick is back, drives an invisible bar; the line sits on its edge.
+local function PlaceTick(cb, readyAt)
+	local holder, tick, probe = cb.tickHolder, cb.tick, cb.probe
+	if cb.mode == "lua" then
+		local inTime = readyAt < cb.endTime
+		local frac = cb.channeling and (cb.endTime - readyAt) / cb.total or (readyAt - cb.startTime) / cb.total
+		if inTime and frac > 0 and frac < 1 then
+			tick:ClearAllPoints()
+			tick:SetPoint("TOP", cb, "TOPLEFT", frac * cb:GetWidth(), 0)
+			tick:SetPoint("BOTTOM", cb, "BOTTOMLEFT", frac * cb:GetWidth(), 0)
+			tick:SetAlpha(1)
+			tick:Show()
+		else
+			tick:Hide()
+		end
+		return inTime
+	end
+	local d = cb.castDur
+	if not (d and d.Copy and C_DurationUtil and C_DurationUtil.CreateManualClock and probe.SetTimerDuration) then
+		tick:Hide(); return true
+	end
+	if cb.probeAt ~= readyAt then
+		cb.probeAt = readyAt
+		local ok = pcall(function()
+			local copy = d:Copy()
+			cb.clock = cb.clock or C_DurationUtil.CreateManualClock()
+			cb.clock:SetTime(readyAt)
+			copy:SetClock(cb.clock)
+			local dir = Enum and Enum.StatusBarTimerDirection
+			probe:SetTimerDuration(copy, nil, cb.channeling and dir and dir.RemainingTime or dir and dir.ElapsedTime)
+			cb.probeDur = copy
+		end)
+		if not ok then cb.probeDur = nil end
+		tick:ClearAllPoints()
+		tick:SetPoint("TOP", probe:GetStatusBarTexture(), "TOPRIGHT", 0, 0)
+		tick:SetPoint("BOTTOM", probe:GetStatusBarTexture(), "BOTTOMRIGHT", 0, 0)
+	end
+	if not cb.probeDur then tick:Hide(); return true end
+	tick:Show()
+	-- past the end of the cast: no line
+	local okE, expired = pcall(cb.probeDur.HasExpired, cb.probeDur)
+	if not okE then tick:SetAlpha(1); return true end
+	if issecret(expired) then
+		if not (tick.SetAlphaFromBoolean and pcall(tick.SetAlphaFromBoolean, tick, expired, 0, 1)) then tick:SetAlpha(1) end
+		return true
+	end
+	tick:SetAlpha(expired and 0 or 1)
+	return not expired
+end
+
 local function UpdateKick(np)
 	local cb = np.cast
-	local k, edge, tick = cb.kick, cb.edge, cb.tick
+	local k, edge, holder = cb.kick, cb.edge, cb.tickHolder
 	if not (kick and db().kickIndicator and cb:IsShown() and cb.attackable) then
-		k:Hide(); edge:Hide(); tick:Hide(); k.state = nil
+		k:Hide(); edge:Hide(); k.edge:Hide(); holder:Hide(); k.state = nil
 		return
 	end
 	local ready, readyAt = kickReady, kickReadyAt
@@ -502,40 +571,28 @@ local function UpdateKick(np)
 			k.bar:Hide()
 			k.text:SetText("")
 			edge:SetColor(c.r, c.g, c.b, 1)
+			k.edge:SetColor(c.r, c.g, c.b, 1)
 		end
 		ShowIfInterruptible(edge, cb.notInt)
-		tick:Hide()
+		ShowIfInterruptible(k.edge, cb.notInt)
+		holder:Hide()
+		cb.probeAt = nil
 		return
 	end
-	edge:Hide()
+	edge:Hide(); k.edge:Hide()
 	k.icon:SetDesaturated(true)
-	local now = GetTime()
+	cb.tick:SetVertexColor(c.r, c.g, c.b, 1)
 	if readyAt then
-		-- exact numbers: countdown text + line on the castbar
 		k.state = "cd"
-		local rem = readyAt - now
+		local rem = math.max(0, readyAt - GetTime())
 		k.bar:SetMinMaxValues(0, 1); k.bar:SetValue(1); k.bar:Show()
 		k.text:SetText(rem >= 1 and string.format("%d", math.ceil(rem)) or string.format("%.1f", rem))
-		local inTime = true
-		if cb.mode == "lua" then
-			inTime = readyAt < cb.endTime
-			local frac = cb.channeling and (cb.endTime - readyAt) / cb.total or (readyAt - cb.startTime) / cb.total
-			if inTime and frac > 0 and frac < 1 then
-				tick:ClearAllPoints()
-				tick:SetPoint("TOP", cb, "TOPLEFT", frac * cb:GetWidth(), 0)
-				tick:SetPoint("BOTTOM", cb, "BOTTOMLEFT", frac * cb:GetWidth(), 0)
-				tick:SetVertexColor(c.r, c.g, c.b, 1)
-				ShowIfInterruptible(tick, cb.notInt)
-			else
-				tick:Hide()
-			end
-		else
-			tick:Hide()
-		end
+		ShowIfInterruptible(holder, cb.notInt)
+		local inTime = PlaceTick(cb, readyAt)
 		if inTime then k.icon:SetVertexColor(1, 1, 1) else k.icon:SetVertexColor(1, 0.35, 0.35) end
 	else
-		-- hidden numbers: let the bar run the cooldown down by itself
-		tick:Hide()
+		-- no number at all: let the cover run the cooldown down by itself
+		holder:Hide()
 		k.icon:SetVertexColor(1, 1, 1)
 		k.text:SetText("")
 		if k.state ~= "hidden" then
@@ -595,6 +652,7 @@ local function CastStart(np, channel)
 	cb.mode = nil
 	if not issecret(startMS) and not issecret(endMS) and startMS and endMS then
 		cb.mode = "lua"
+		cb.castDur = nil
 		cb.startTime, cb.endTime = startMS / 1000, endMS / 1000
 		cb.total = math.max(0.001, cb.endTime - cb.startTime)
 		cb:SetMinMaxValues(0, cb.total)
@@ -603,6 +661,7 @@ local function CastStart(np, channel)
 		local ok = false
 		if fn and cb.SetTimerDuration then
 			local okd, dur = pcall(fn, unit)
+			cb.castDur = okd and dur or nil
 			if okd and dur then
 				local dir = Enum and Enum.StatusBarTimerDirection
 				ok = dir and pcall(cb.SetTimerDuration, cb, dur, nil, channel and dir.RemainingTime or dir.ElapsedTime)
@@ -613,6 +672,7 @@ local function CastStart(np, channel)
 	end
 	cb:Show()
 	cb.kick.state = nil
+	cb.probeAt = nil
 	B:Try(UpdateKick, np)
 end
 
@@ -681,16 +741,7 @@ local function CreatePlate(plate)
 	th:Hide()
 	np.threat = th
 	-- absorb shield: clipped to the health bar, starts where the health ends
-	local clip = CreateFrame("Frame", nil, hb)
-	clip:SetAllPoints(hb)
-	clip:SetClipsChildren(true)
-	local ab = CreateFrame("StatusBar", nil, clip)
-	ab:SetStatusBarTexture(B.white)
-	ab:SetStatusBarColor(0.80, 0.92, 1.00, 0.55)
-	ab:SetPoint("TOPLEFT", hb:GetStatusBarTexture(), "TOPRIGHT", 0, 0)
-	ab:SetPoint("BOTTOMLEFT", hb:GetStatusBarTexture(), "BOTTOMRIGHT", 0, 0)
-	ab:Hide()
-	np.absorb = ab
+	np.absorb = B:CreateAbsorb(hb)
 	-- text above the shield
 	local textLayer = CreateFrame("Frame", nil, hb)
 	textLayer:SetAllPoints(hb)
@@ -735,8 +786,18 @@ local function CreatePlate(plate)
 	k.text:SetPoint("CENTER", k, "CENTER", 0, 0)
 	k:Hide()
 	cb.kick = k
+	k.edge = CreateEdge(k)
 	cb.edge = CreateEdge(cb)
-	cb.tick = cb:CreateTexture(nil, "OVERLAY", nil, 7)
+	-- invisible bar that the "kick is back here" line rides on
+	cb.probe = CreateFrame("StatusBar", nil, cb)
+	cb.probe:SetAllPoints(cb)
+	cb.probe:SetStatusBarTexture(B.white)
+	cb.probe:SetStatusBarColor(0, 0, 0, 0)
+	cb.tickHolder = CreateFrame("Frame", nil, cb)
+	cb.tickHolder:SetAllPoints(cb)
+	cb.tickHolder:SetFrameLevel(cb:GetFrameLevel() + 4)
+	cb.tickHolder:Hide()
+	cb.tick = cb.tickHolder:CreateTexture(nil, "OVERLAY", nil, 7)
 	cb.tick:SetTexture(B.white)
 	cb.tick:Hide()
 	cb:Hide()
@@ -802,15 +863,19 @@ local function Layout(np)
 	B:SetFont(np.level, d.fontSize)
 	-- with the kick icon on the right the bar is centred between the two icons
 	local withKick = d.kickIndicator and kick
-	np.cast:SetSize(d.width - (d.castHeight + 2) * (withKick and 2 or 1), d.castHeight)
+	local ks = d.kickSize or 18
+	local left, right = d.castHeight + 2, withKick and (ks + 2) or 0
+	np.cast:SetSize(d.width - left - right, d.castHeight)
 	np.cast:ClearAllPoints()
-	np.cast:SetPoint("TOP", d.nameAbove and np.health or np.name, "BOTTOM", withKick and 0 or (d.castHeight + 2) / 2, d.nameAbove and -4 or -3)
+	np.cast:SetPoint("TOP", d.nameAbove and np.health or np.name, "BOTTOM", (left - right) / 2, d.nameAbove and -4 or -3)
 	local cb = np.cast
-	cb.kick:SetSize(d.castHeight, d.castHeight)
-	B:SetFont(cb.kick.text, math.max(7, d.castHeight - 2))
-	cb.edge:Place(cb.icon, withKick and cb.kick or cb, px)
-	cb.tick:SetWidth(math.max(px * 2, 1))
+	cb.kick:SetSize(ks, ks)
+	B:SetFont(cb.kick.text, math.max(8, math.floor(ks * 0.55)))
+	cb.edge:Place(cb.icon, cb, px)
+	cb.kick.edge:Place(cb.kick, cb.kick, px)
+	cb.tick:SetWidth(math.max(px * 3, 2))
 	np.absorb:SetWidth(d.width)
+
 	np.cast:SetStatusBarTexture(B:GetTexture())
 	np.cast.icon:SetSize(d.castHeight, d.castHeight)
 	B:SetFont(np.cast.text, math.max(7, d.castHeight - 1))
@@ -925,13 +990,13 @@ local function OnEvent(_, event, unit)
 		return
 	end
 	if event == "SPELL_UPDATE_COOLDOWN" then
-		kickReady, kickReadyAt = KickState()
+		RefreshKick()
 		for _, np in pairs(active) do if np.cast:IsShown() then B:Try(UpdateKick, np) end end
 		return
 	end
 	if event == "SPELLS_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "UNIT_PET" then
 		M:FindKick()
-		kickReady, kickReadyAt = KickState()
+		RefreshKick()
 		for _, np in pairs(active) do B:Try(Layout, np); B:Try(UpdateKick, np) end
 		return
 	end
@@ -974,7 +1039,7 @@ function M:OnEnable()
 	end
 	self:ApplyCVars()
 	self:FindKick()
-	kickReady, kickReadyAt = KickState()
+	RefreshKick()
 	local f = CreateFrame("Frame")
 	for _, e in ipairs(EVENTS) do pcall(f.RegisterEvent, f, e) end
 	f:SetScript("OnEvent", B.Safe(OnEvent))
@@ -984,7 +1049,7 @@ function M:OnEnable()
 		self.elapsed = self.elapsed + el
 		if self.elapsed < 0.1 then return end
 		self.elapsed = 0
-		if kick then kickReady, kickReadyAt = KickState() end
+		if kick then RefreshKick() end
 		for _, np in pairs(active) do
 			local plate = np.plate
 			if plate and plate.bHide and plate:GetAlpha() ~= 0 then SetHidden(plate) end

@@ -39,6 +39,7 @@ local function UpdateHealth(b)
 	local d = K(b)
 	pcall(b.health.SetMinMaxValues, b.health, 0, UnitHealthMax(unit))
 	if not pcall(b.health.SetValue, b.health, UnitHealth(unit)) then b.health:SetValue(0) end
+	B:UpdateAbsorb(b.health, unit, db().absorbs ~= false)
 
 	local offline = not B.Plain(UnitIsConnected(unit), true)
 	local dead = B.Plain(UnitIsDeadOrGhost(unit), false)
@@ -251,6 +252,7 @@ local function StyleButton(b, kind)
 	local hp = B:CreateStatusBar(b)
 	hp:SetAllPoints(b)
 	b.health = hp
+	B:CreateAbsorb(hp)
 	B:CreateBorder(b, 0, 0, 0, 1, B:Pixel(b))
 
 	local overlay = CreateFrame("Frame", nil, b)
@@ -590,7 +592,7 @@ function M:OnEnable()
 
 	-- events
 	local f = CreateFrame("Frame")
-	local unitEvents = { "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_CONNECTION", "UNIT_NAME_UPDATE", "UNIT_FLAGS",
+	local unitEvents = { "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_ABSORB_AMOUNT_CHANGED", "UNIT_CONNECTION", "UNIT_NAME_UPDATE", "UNIT_FLAGS",
 		"UNIT_THREAT_SITUATION_UPDATE", "INCOMING_SUMMON_CHANGED", "INCOMING_RESURRECT_CHANGED" }
 	if not B:HasAuraContainers() then unitEvents[#unitEvents + 1] = "UNIT_AURA" end
 	for _, e in ipairs(unitEvents) do pcall(f.RegisterEvent, f, e) end

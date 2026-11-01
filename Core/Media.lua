@@ -502,6 +502,39 @@ function B:CreateStatusBar(parent, name)
 	return sb
 end
 
+-- Absorb shield on a health bar: a light bar that starts where the health
+-- ends, clipped to the health bar. Takes Midnight's hidden numbers as they are.
+function B:CreateAbsorb(hb)
+	if hb.bAbsorb then return hb.bAbsorb end
+	local clip = CreateFrame("Frame", nil, hb)
+	clip:SetAllPoints(hb)
+	clip:SetClipsChildren(true)
+	local ab = CreateFrame("StatusBar", nil, clip)
+	ab:SetStatusBarTexture(self.white)
+	ab:SetStatusBarColor(0.80, 0.92, 1.00, 0.55)
+	local fill = hb:GetStatusBarTexture()
+	ab:SetPoint("TOPLEFT", fill, "TOPRIGHT", 0, 0)
+	ab:SetPoint("BOTTOMLEFT", fill, "BOTTOMRIGHT", 0, 0)
+	ab:SetWidth(math.max(1, hb:GetWidth() or 1))
+	hb:HookScript("OnSizeChanged", function(_, w) if type(w) == "number" and w > 0 then ab:SetWidth(w) end end)
+	ab:Hide()
+	hb.bAbsorb = ab
+	return ab
+end
+
+function B:UpdateAbsorb(hb, unit, enabled)
+	local ab = hb and hb.bAbsorb
+	if not ab then return end
+	if not enabled or not unit or not UnitGetTotalAbsorbs then ab:Hide(); return end
+	local ok, amount = pcall(UnitGetTotalAbsorbs, unit)
+	if not ok or amount == nil or (not self.IsSecret(amount) and amount <= 0) then ab:Hide(); return end
+	local okm, max = pcall(UnitHealthMax, unit)
+	if not okm or max == nil then ab:Hide(); return end
+	pcall(ab.SetMinMaxValues, ab, 0, max)
+	pcall(ab.SetValue, ab, amount)
+	ab:Show()
+end
+
 function B:RefreshTextures()
 	if not self.statusBars then return end
 	local tex = self:GetTexture()

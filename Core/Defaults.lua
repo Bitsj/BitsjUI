@@ -104,6 +104,7 @@ B.defaults = {
 	unitframes = {
 		enabled = true,
 		fitCDM = true,               -- player / target frames sit beside Blizzard's Cooldown Manager
+		absorbs = true,              -- shield bar on the health bars
 		cdmGap = 12,
 		style = "clean",             -- clean (slim bars) | portrait
 		healthColor = "class",       -- class | dark | custom
@@ -221,7 +222,7 @@ B.defaults = {
 		targetGlow = true, targetArrows = true,
 		targetColor = color(1, 1, 1),
 		castbar = true, castHeight = 10,
-		kickIndicator = true, kickColor = color(0.30, 1.00, 0.45),
+		kickIndicator = true, kickColor = color(0.30, 1.00, 0.45), kickSize = 18,
 		absorbs = true,
 		debuffs = true, debuffSize = 22, debuffNum = 6, onlyMine = true,
 		buffs = true, buffSize = 20, buffNum = 4,
@@ -231,6 +232,7 @@ B.defaults = {
 	raidframes = {
 		enabled = true,
 		hideBlizzard = true,
+		absorbs = true,              -- shield bar on the health bars
 		party = {
 			show = true,
 			summonIcon = true,

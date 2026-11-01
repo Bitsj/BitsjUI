@@ -129,6 +129,7 @@ local function UpdateHealth(f)
 	local max, hp = UnitHealthMax(unit), UnitHealth(unit)
 	f.health:SetMinMaxValues(0, max)
 	f.health:SetValue(hp)
+	B:UpdateAbsorb(f.health, unit, db.absorbs ~= false)
 
 	local r, g, b
 	if db.healthColor == "dark" then
@@ -470,7 +471,7 @@ M.UpdateFrame = UpdateAll
 -- Construction
 -------------------------------------------------------------------------------
 local unitEvents = {
-	UNIT_HEALTH = UpdateHealth, UNIT_MAXHEALTH = UpdateHealth, UNIT_CONNECTION = UpdateHealth, UNIT_FACTION = UpdateAll,
+	UNIT_HEALTH = UpdateHealth, UNIT_MAXHEALTH = UpdateHealth, UNIT_ABSORB_AMOUNT_CHANGED = UpdateHealth, UNIT_CONNECTION = UpdateHealth, UNIT_FACTION = UpdateAll,
 	UNIT_POWER_UPDATE = UpdatePower, UNIT_POWER_FREQUENT = UpdatePower, UNIT_MAXPOWER = UpdatePower, UNIT_DISPLAYPOWER = UpdatePower,
 	UNIT_NAME_UPDATE = UpdateName, UNIT_LEVEL = UpdateName, UNIT_CLASSIFICATION_CHANGED = UpdateName,
 	UNIT_PORTRAIT_UPDATE = UpdatePortrait, UNIT_MODEL_CHANGED = UpdatePortrait,
@@ -509,6 +510,7 @@ local function CreateUnitFrame(def)
 	B:CreateBackdrop(bars, 0.9)
 	f.bars = bars
 	f.health = B:CreateStatusBar(bars)
+	B:CreateAbsorb(f.health)
 	f.power = B:CreateStatusBar(bars)
 
 	-- portrait
