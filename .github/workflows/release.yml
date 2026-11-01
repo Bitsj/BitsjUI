@@ -30,24 +30,35 @@ jobs:
 
       - name: Read version from the toc
         id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           v=$(grep -m1 '^## Version:' BitsjUI.toc | sed 's/## Version:[[:space:]]*//' | tr -d '\r[:space:]')
           echo "tag=v$v" >> "$GITHUB_OUTPUT"
-          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "v$v is already released, nothing to do."
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Tag the new version
-        if: steps.version.outputs.exists == 'false'
+        if: steps.version.outputs.skip == 'false'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.tag }}" -m "BitsjUI ${{ steps.version.outputs.tag }}"
-          git push origin "${{ steps.version.outputs.tag }}"
+          tag="${{ steps.version.outputs.tag }}"
+          if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$tag" -m "BitsjUI $tag"
+            git push origin "$tag"
+          fi
+          git checkout -q "$tag"
 
+      # The packager skips "push to branch" runs that have a tag on them (it
+      # expects a separate tag run, which a bot-made tag never starts), so it
+      # is run directly here as a manual build of the tag.
       - name: Package and upload
-        if: steps.version.outputs.exists == 'false'
-        uses: BigWigsMods/packager@v2
+        if: steps.version.outputs.skip == 'false'
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/release.sh" https://raw.githubusercontent.com/BigWigsMods/packager/v2/release.sh
+          GITHUB_EVENT_NAME=workflow_dispatch bash "$RUNNER_TEMP/release.sh"
