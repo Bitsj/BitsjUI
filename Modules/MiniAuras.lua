@@ -86,7 +86,7 @@ function M:ApplyLayout()
 end
 
 -- bump when the layout below changes, so people get asked once more
-M.LAYOUT_VERSION = 2
+M.LAYOUT_VERSION = 3
 
 function M:ApplyTo(db)
 	local m = db.Modules
@@ -144,7 +144,12 @@ function M:ApplyTo(db)
 	Set(m, "AllyKickTracker.Bars.Width", math.floor((party.width or 120) + 0.5))
 	Set(m, "AllyKickTracker.Bars.Height", 20)
 	local tex = B.db.general.texture
-	if type(tex) == "string" and tex:find("^Bitsj") then Set(m, "AllyKickTracker.Bars.Texture", tex) end
+	local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+	if type(tex) == "string" and LSM and LSM:IsValid("statusbar", tex) then Set(m, "AllyKickTracker.Bars.Texture", tex) end
+
+	-- MiniAuras' debug mode is on by default and spams chat with notes like
+	-- "Sound registration failed"; those are for its author, not for players
+	Set(db, "DebugMode", false)
 
 end
 
