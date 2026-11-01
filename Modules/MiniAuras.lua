@@ -13,6 +13,8 @@
 	  - raid: small icons centred on the tile
 	  - nameplate icons sized to BitsjUI's nameplates
 	  - MiniAuras' own frame buff / debuff rows stay off (BitsjUI shows those)
+	  - the party interrupt tracker sits right under the party frames, same
+	    width, with BitsjUI's bar texture
 	MiniAuras applies the changes after the reload that follows.
 ]]
 local _, B = ...
@@ -110,6 +112,21 @@ function M:ApplyLayout()
 			Set(m, "Nameplates." .. side .. "." .. bar .. ".Icons.Size", size)
 		end
 	end
+
+	-- interrupt tracker: right under the party frames, same width, BitsjUI bars
+	local party = B.db.raidframes.party
+	Set(m, "AllyKickTracker.RelativeTo", "BitsjUIParty")
+	Set(m, "AllyKickTracker.Point", "TOPLEFT")
+	Set(m, "AllyKickTracker.RelativePoint", "BOTTOMLEFT")
+	Set(m, "AllyKickTracker.Offset.X", 0)
+	Set(m, "AllyKickTracker.Offset.Y", -8)
+	Set(m, "AllyKickTracker.Grow", "DOWN")
+	Set(m, "AllyKickTracker.BarSpacing", party.spacing or 4)
+	Set(m, "AllyKickTracker.Locked", true)
+	Set(m, "AllyKickTracker.Bars.Width", math.floor((party.width or 120) + 0.5))
+	Set(m, "AllyKickTracker.Bars.Height", 20)
+	local tex = B.db.general.texture
+	if type(tex) == "string" and tex:find("^Bitsj") then Set(m, "AllyKickTracker.Bars.Texture", tex) end
 
 	B.global.miniAurasStyled = true
 	B:Print("MiniAuras set up to match BitsjUI. Reloading...")
