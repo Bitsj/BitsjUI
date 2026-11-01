@@ -32,9 +32,16 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           v=$(grep -m1 '^## Version:' BitsjUI.toc | sed 's/## Version:[[:space:]]*//' | tr -d '\r[:space:]')
           echo "tag=v$v" >> "$GITHUB_OUTPUT"
+          # "[rerelease]" in the commit message replaces the existing release of
+          # this version with the current code (same version number, new build)
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && printf '%s' "$COMMIT_MSG" | grep -q "\[rerelease\]"; then
+            if gh release view "v$v" >/dev/null 2>&1; then gh release delete "v$v" --cleanup-tag --yes; fi
+            git tag -d "v$v" 2>/dev/null || true
+          fi
           # a manual "Run workflow" always builds (e.g. to retry a failed upload)
           if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ] && gh release view "v$v" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
