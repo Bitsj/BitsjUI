@@ -24,7 +24,7 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
-	{ "1.2.0", {
+	{ "1.1.1", {
 		"Defensives: icons above the player frame while a defensive is active on you, for every class, including ones others cast on you.",
 		"Set size, spacing and extra or ignored spell IDs in /bui > Defensives.",
 	} },
