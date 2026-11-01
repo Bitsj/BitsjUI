@@ -24,16 +24,13 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
-	{ "3.3.0", {
-		"Update notice: BitsjUI tells you when someone in your guild or group has a newer version.",
-		"\"What's new\" window after each update (/bui whatsnew to see it again).",
-	} },
-	{ "3.2.0", {
-		"Works on Classic Era and WoW Forever as well as retail.",
-		"Classic: combat-log damage meter, secure buff bar, old character sheet, bags and quest list restyled.",
-		"Hunter pet happiness beside the pet frame (Classic / Forever).",
-		"Spell timers sit under the player frame and grow downwards.",
-		"Swing timer above the castbar: main hand, off hand and ranged.",
+	{ "1.0.0", {
+		"First official release of BitsjUI.",
+		"Clean, rounded UI with its own menu (/bui) and drag and drop for every frame (/bui move).",
+		"Action bars, unit frames, castbars, nameplates, party and raid frames, damage meter, spell timers and buffs.",
+		"Minimap, chat, tooltips, bags, character sheet, friends list and quest tracker in the same style.",
+		"Works on Retail and WoW Forever.",
+		"Update notice when a newer version is around, and this window after each update.",
 	} },
 }
 

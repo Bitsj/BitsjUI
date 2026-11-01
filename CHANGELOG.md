@@ -1,13 +1,10 @@
-# BitsjUI 3.3.0
+# BitsjUI 1.0.0
 
-## New
-- Update notice: tells you when someone in your guild or group has a newer version of BitsjUI.
-- "What's new" window after each update (/bui whatsnew to open it again).
-- WoW Forever support: classic game rules are picked up automatically (no Holy Power, classic enchant slots, ranged slot).
-- Hunter pet happiness beside the pet frame on WoW Forever, with damage and loyalty on hover.
-- Swing timer above the player castbar (ranged swings on WoW Forever).
+First official release.
 
-## Changed
-- Spell timers now sit under the player frame, at the same width, and grow downwards.
-- Party and raid frames show a small icon when someone is being summoned or resurrected.
-- The class resource bar no longer shows empty segments for resources your class doesn't have.
+- A clean, rounded UI with its own menu (/bui) and drag and drop for every frame (/bui move).
+- Action bars, unit frames, castbars, nameplates, party and raid frames, a damage meter, spell timers and buffs.
+- Minimap, chat, tooltips, bags, character sheet, friends list and quest tracker, all in the same style.
+- Theme that follows your class or faction colour, softened bar colours and sharp text.
+- Works on Retail and WoW Forever (classic game rules are detected automatically).
+- Update notice when someone in your guild or group has a newer version, and a "What's new" window after each update.

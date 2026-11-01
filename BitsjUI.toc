@@ -2,7 +2,7 @@
 ## Title: |cff4fd1b5Bitsj|rUI
 ## Notes: Clean drag and drop UI with its own config menu. Type /bui
 ## Author: Bitsj
-## Version: 3.3.0
+## Version: 1.0.0
 ## X-Wago-ID: 5NRgXp63
 ## Category: User Interface
 ## IconTexture: Interface\AddOns\BitsjUI\Media\Textures\Logo
