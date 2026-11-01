@@ -192,9 +192,13 @@ local function CreateWhatsNew()
 	f.line:SetPoint("TOPLEFT", 12, -40)
 	f.line:SetPoint("TOPRIGHT", -12, -40)
 	f.body = B:CreateText(f, 12, "LEFT")
+	-- fixed width and an explicit height: a font string with only a top
+	-- anchor stays one line tall and cuts the text off with "..."
 	f.body:SetPoint("TOPLEFT", 18, -52)
-	f.body:SetPoint("RIGHT", f, "RIGHT", -18, 0)
+	f.body:SetWidth(404)
 	f.body:SetJustifyV("TOP")
+	f.body:SetWordWrap(true)
+	if f.body.SetMaxLines then f.body:SetMaxLines(0) end
 	f.body:SetSpacing(4)
 	local close = CreateFrame("Button", nil, f)
 	close:SetSize(80, 24)
@@ -228,8 +232,11 @@ function M:ShowWhatsNew(since)
 	if #lines == 0 then lines[1] = "No notes for this version." end
 	whatsNew.title:SetText(B:TitleText() .. " |cffffffffupdated to " .. B.version .. "|r")
 	whatsNew.line:SetColorTexture(ar, ag, ab, 0.7)
+	whatsNew.body:SetHeight(1000)   -- room to measure the wrapped text
 	whatsNew.body:SetText(table.concat(lines, "\n"))
-	whatsNew:SetHeight(math.min(520, 52 + whatsNew.body:GetStringHeight() + 50))
+	local h = math.ceil(whatsNew.body:GetStringHeight()) + 4
+	whatsNew.body:SetHeight(h)
+	whatsNew:SetHeight(math.min(560, 52 + h + 50))
 	whatsNew:Show()
 end
 
