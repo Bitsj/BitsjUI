@@ -187,11 +187,27 @@ local function Color(unit)
 	return r, g, b
 end
 
+-------------------------------------------------------------------------------
+-- Absorb shields: a light bar that starts where the health ends. Works with
+-- Midnight's hidden numbers, the status bar takes them as they are.
+-------------------------------------------------------------------------------
+local function UpdateAbsorb(np)
+	local ab = np.absorb
+	if not ab then return end
+	if not db().absorbs or not UnitGetTotalAbsorbs then ab:Hide(); return end
+	local ok, amount = pcall(UnitGetTotalAbsorbs, np.unit)
+	if not ok or amount == nil or (not issecret(amount) and amount <= 0) then ab:Hide(); return end
+	ab:SetMinMaxValues(0, UnitHealthMax(np.unit))
+	ab:SetValue(amount)
+	ab:Show()
+end
+
 local function UpdateHealth(np)
 	local unit = np.unit
 	local max, hp = UnitHealthMax(unit), UnitHealth(unit)
 	np.health:SetMinMaxValues(0, max)
 	np.health:SetValue(hp)
+	UpdateAbsorb(np)
 	local r, g, b = Color(unit)
 	np.health:SetStatusBarColor(r, g, b)
 	-- the missing part stays readable: a dim version of the colour, fully opaque
@@ -376,6 +392,170 @@ function M.CanPurge()
 end
 
 -------------------------------------------------------------------------------
+-- Interrupt indicator on enemy castbars
+--   ready      -> green frame around the castbar, bright kick icon
+--   on cooldown-> grey kick icon with the cooldown running down, and a green
+--                 line on the castbar where your kick comes back (red icon
+--                 if it won't be back before the cast ends)
+-- Blizzard hides some timings in instances; then the line can't be placed,
+-- but the frame still turns green the moment your kick is ready.
+-------------------------------------------------------------------------------
+local KICKS = {
+	WARRIOR = { 6552 }, ROGUE = { 1766 }, DEATHKNIGHT = { 47528 }, DEMONHUNTER = { 183752 },
+	PALADIN = { 96231 }, SHAMAN = { 57994 }, MAGE = { 2139 }, HUNTER = { 147362, 187707 },
+	MONK = { 116705 }, DRUID = { 106839, 78675 }, PRIEST = { 15487 }, EVOKER = { 351338 },
+	WARLOCK = { 119910, 19647, 132409 },
+}
+-- Classic / Forever: by name (spell ranks have different IDs)
+local CLASSIC_KICKS = {
+	WARRIOR = { "Pummel", "Shield Bash" }, ROGUE = { "Kick" }, MAGE = { "Counterspell" },
+	SHAMAN = { "Wind Shear", "Earth Shock" }, PRIEST = { "Silence" }, DEATHKNIGHT = { "Mind Freeze" },
+	PALADIN = { "Rebuke" }, HUNTER = { "Counter Shot" }, DRUID = { "Skull Bash" }, MONK = { "Spear Hand Strike" },
+}
+local kick            -- { id = spellID or name, icon = texture }
+local kickReady, kickReadyAt
+
+local function Known(id)
+	for _, fn in ipairs({ _G.IsPlayerSpell, _G.IsSpellKnownOrOverridesKnown }) do
+		local ok, r = pcall(fn, id)
+		if ok and r then return true end
+	end
+	local ok, r = pcall(_G.IsSpellKnown, id, true)   -- pet spells (Spell Lock)
+	return ok and r and true or false
+end
+
+function M:FindKick()
+	kick = nil
+	if not db().kickIndicator then return end
+	local _, class = UnitClass("player")
+	if B.classicContent then
+		for _, name in ipairs(CLASSIC_KICKS[class] or {}) do
+			local n, icon
+			if C_Spell and C_Spell.GetSpellInfo then
+				local ok, info = pcall(C_Spell.GetSpellInfo, name)
+				if ok and type(info) == "table" then n, icon = info.name, info.iconID end
+			elseif GetSpellInfo then
+				n, _, icon = GetSpellInfo(name)
+			end
+			if n then kick = { id = name, icon = icon }; break end
+		end
+	end
+	if not kick then
+		for _, id in ipairs(KICKS[class] or {}) do
+			if Known(id) then
+				local icon = (C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(id)) or (GetSpellTexture and GetSpellTexture(id))
+				kick = { id = id, icon = icon }
+				break
+			end
+		end
+	end
+	M.kick = kick
+end
+
+-- ready (bool), readyAt (GetTime() value, or nil when Blizzard hides it)
+local function KickState()
+	if not kick then return end
+	local start, dur, active, onGCD
+	if C_Spell and C_Spell.GetSpellCooldown then
+		local ok, info = pcall(C_Spell.GetSpellCooldown, kick.id)
+		if ok and type(info) == "table" then start, dur, active, onGCD = info.startTime, info.duration, info.isActive, info.isOnGCD end
+	elseif GetSpellCooldown then
+		local ok, s, d = pcall(GetSpellCooldown, kick.id)
+		if ok then start, dur = s, d end
+	end
+	if start and dur and not issecret(start) and not issecret(dur) then
+		if dur == 0 or dur <= 1.5 then return true end   -- off cooldown, or only the global cooldown
+		local at = start + dur
+		return at <= GetTime(), at
+	end
+	if type(active) == "boolean" then return (not active) or onGCD == true end
+	return true
+end
+
+-- show a frame / texture unless the cast can't be interrupted (flag may be hidden)
+local function ShowIfInterruptible(obj, notInt)
+	if issecret(notInt) then
+		obj:Show()
+		if not (obj.SetAlphaFromBoolean and pcall(obj.SetAlphaFromBoolean, obj, notInt, 0, 1)) then obj:SetAlpha(1) end
+	else
+		obj:SetAlpha(1)
+		obj:SetShown(not notInt)
+	end
+end
+
+local function UpdateKick(np)
+	local cb = np.cast
+	local k, edge, tick = cb.kick, cb.edge, cb.tick
+	if not (kick and db().kickIndicator and cb:IsShown() and cb.attackable) then
+		k:Hide(); edge:Hide(); tick:Hide(); k.state = nil
+		return
+	end
+	local ready, readyAt = kickReady, kickReadyAt
+	k.icon:SetTexture(kick.icon)
+	ShowIfInterruptible(k, cb.notInt)
+	local c = db().kickColor
+	if ready then
+		if k.state ~= "ready" then
+			k.state = "ready"
+			k.icon:SetDesaturated(false)
+			k.icon:SetVertexColor(1, 1, 1)
+			k.bar:Hide()
+			k.text:SetText("")
+			edge:SetColor(c.r, c.g, c.b, 1)
+		end
+		ShowIfInterruptible(edge, cb.notInt)
+		tick:Hide()
+		return
+	end
+	edge:Hide()
+	k.icon:SetDesaturated(true)
+	local now = GetTime()
+	if readyAt then
+		-- exact numbers: countdown text + line on the castbar
+		k.state = "cd"
+		local rem = readyAt - now
+		k.bar:SetMinMaxValues(0, 1); k.bar:SetValue(1); k.bar:Show()
+		k.text:SetText(rem >= 1 and string.format("%d", math.ceil(rem)) or string.format("%.1f", rem))
+		local inTime = true
+		if cb.mode == "lua" then
+			inTime = readyAt < cb.endTime
+			local frac = cb.channeling and (cb.endTime - readyAt) / cb.total or (readyAt - cb.startTime) / cb.total
+			if inTime and frac > 0 and frac < 1 then
+				tick:ClearAllPoints()
+				tick:SetPoint("TOP", cb, "TOPLEFT", frac * cb:GetWidth(), 0)
+				tick:SetPoint("BOTTOM", cb, "BOTTOMLEFT", frac * cb:GetWidth(), 0)
+				tick:SetVertexColor(c.r, c.g, c.b, 1)
+				ShowIfInterruptible(tick, cb.notInt)
+			else
+				tick:Hide()
+			end
+		else
+			tick:Hide()
+		end
+		if inTime then k.icon:SetVertexColor(1, 1, 1) else k.icon:SetVertexColor(1, 0.35, 0.35) end
+	else
+		-- hidden numbers: let the bar run the cooldown down by itself
+		tick:Hide()
+		k.icon:SetVertexColor(1, 1, 1)
+		k.text:SetText("")
+		if k.state ~= "hidden" then
+			k.state = "hidden"
+			local ok = false
+			if C_Spell and C_Spell.GetSpellCooldownDuration and k.bar.SetTimerDuration then
+				local okd, dur = pcall(C_Spell.GetSpellCooldownDuration, kick.id, true)
+				local dir = Enum and Enum.StatusBarTimerDirection
+				if okd and dur then
+					ok = dir and pcall(k.bar.SetTimerDuration, k.bar, dur, nil, dir.RemainingTime)
+					if not ok then ok = pcall(k.bar.SetTimerDuration, k.bar, dur) end
+				end
+			end
+			if not ok then k.bar:SetMinMaxValues(0, 1); k.bar:SetValue(1) end
+			k.bar:Show()
+		end
+	end
+end
+
+-------------------------------------------------------------------------------
 -- Castbar
 -------------------------------------------------------------------------------
 local function CastColor(cb, notInt)
@@ -407,6 +587,8 @@ local function CastStart(np, channel)
 	end
 	if not B.HasValue(name) then cb:Hide(); return end
 	cb.channeling = channel
+	cb.notInt = notInt
+	cb.attackable = B.Plain(UnitCanAttack("player", unit), true)
 	pcall(cb.icon.SetTexture, cb.icon, texture)
 	if not pcall(cb.text.SetText, cb.text, text) then pcall(cb.text.SetText, cb.text, name) end
 	CastColor(cb, notInt)
@@ -430,16 +612,37 @@ local function CastStart(np, channel)
 		if not ok then cb:SetMinMaxValues(0, 1); cb:SetValue(1) end
 	end
 	cb:Show()
+	cb.kick.state = nil
+	B:Try(UpdateKick, np)
 end
 
 local function CastStop(np)
 	np.cast.mode = nil
 	np.cast:Hide()
+	UpdateKick(np)
 end
 
 -------------------------------------------------------------------------------
 -- Plate construction
 -------------------------------------------------------------------------------
+-- four thin lines around a box (used for the "kick ready" frame)
+local function CreateEdge(parent)
+	local e = CreateFrame("Frame", nil, parent)
+	e.tex = {}
+	for i = 1, 4 do e.tex[i] = e:CreateTexture(nil, "OVERLAY", nil, 7); e.tex[i]:SetTexture(B.white) end
+	function e:SetColor(r, g, b, a) for i = 1, 4 do self.tex[i]:SetVertexColor(r, g, b, a or 1) end end
+	function e:Place(left, right, w)
+		local t = self.tex
+		local o = w
+		t[1]:ClearAllPoints(); t[1]:SetPoint("BOTTOMLEFT", left, "TOPLEFT", -o - w, o); t[1]:SetPoint("BOTTOMRIGHT", right, "TOPRIGHT", o + w, o); t[1]:SetHeight(w)
+		t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT", left, "BOTTOMLEFT", -o - w, -o); t[2]:SetPoint("TOPRIGHT", right, "BOTTOMRIGHT", o + w, -o); t[2]:SetHeight(w)
+		t[3]:ClearAllPoints(); t[3]:SetPoint("TOPRIGHT", left, "TOPLEFT", -o, o); t[3]:SetPoint("BOTTOMRIGHT", left, "BOTTOMLEFT", -o, -o); t[3]:SetWidth(w)
+		t[4]:ClearAllPoints(); t[4]:SetPoint("TOPLEFT", right, "TOPRIGHT", o, o); t[4]:SetPoint("BOTTOMLEFT", right, "BOTTOMRIGHT", o, -o); t[4]:SetWidth(w)
+	end
+	e:Hide()
+	return e
+end
+
 local function CreatePlate(plate)
 	-- parented to UIParent (so hiding Blizzard's plate doesn't hide ours),
 	-- anchored to the plate so it follows it in the world
@@ -477,7 +680,22 @@ local function CreatePlate(plate)
 	function th:SetColor(r, g, b, a) for i = 1, 4 do self.tex[i]:SetVertexColor(r, g, b, a or 1) end end
 	th:Hide()
 	np.threat = th
-	np.hpText = hb:CreateFontString(nil, "OVERLAY")
+	-- absorb shield: clipped to the health bar, starts where the health ends
+	local clip = CreateFrame("Frame", nil, hb)
+	clip:SetAllPoints(hb)
+	clip:SetClipsChildren(true)
+	local ab = CreateFrame("StatusBar", nil, clip)
+	ab:SetStatusBarTexture(B.white)
+	ab:SetStatusBarColor(0.80, 0.92, 1.00, 0.55)
+	ab:SetPoint("TOPLEFT", hb:GetStatusBarTexture(), "TOPRIGHT", 0, 0)
+	ab:SetPoint("BOTTOMLEFT", hb:GetStatusBarTexture(), "BOTTOMRIGHT", 0, 0)
+	ab:Hide()
+	np.absorb = ab
+	-- text above the shield
+	local textLayer = CreateFrame("Frame", nil, hb)
+	textLayer:SetAllPoints(hb)
+	textLayer:SetFrameLevel(hb:GetFrameLevel() + 3)
+	np.hpText = textLayer:CreateFontString(nil, "OVERLAY")
 	np.hpText:SetPoint("CENTER", hb, "CENTER", 0, 0)
 	np.name = np:CreateFontString(nil, "OVERLAY")
 	np.name:SetPoint("TOP", hb, "BOTTOM", 0, -3)
@@ -500,6 +718,27 @@ local function CreatePlate(plate)
 	cb.text = cb:CreateFontString(nil, "OVERLAY")
 	cb.text:SetPoint("CENTER")
 	cb.text:SetWordWrap(false)
+	-- interrupt indicator
+	local k = CreateFrame("Frame", nil, cb)
+	k:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+	k.icon = k:CreateTexture(nil, "ARTWORK")
+	k.icon:SetAllPoints()
+	k.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	B:CreateBorder(k, 0, 0, 0, 1, B:Pixel(k))
+	k.bar = CreateFrame("StatusBar", nil, k)   -- dark cover that shrinks as the cooldown runs out
+	k.bar:SetAllPoints()
+	k.bar:SetOrientation("VERTICAL")
+	k.bar:SetStatusBarTexture(B.white)
+	k.bar:SetStatusBarColor(0, 0, 0, 0.6)
+	k.bar:Hide()
+	k.text = k.bar:CreateFontString(nil, "OVERLAY")
+	k.text:SetPoint("CENTER", k, "CENTER", 0, 0)
+	k:Hide()
+	cb.kick = k
+	cb.edge = CreateEdge(cb)
+	cb.tick = cb:CreateTexture(nil, "OVERLAY", nil, 7)
+	cb.tick:SetTexture(B.white)
+	cb.tick:Hide()
 	cb:Hide()
 	cb:SetScript("OnUpdate", B.Safe(function(self)
 		if self.mode ~= "lua" then return end
@@ -561,9 +800,17 @@ local function Layout(np)
 	np.arrowR:SetPoint("LEFT", np.health, "RIGHT", d.showLevel and d.nameAbove and 22 or 4, 0)
 	np.name:SetWidth(d.width + 40)
 	B:SetFont(np.level, d.fontSize)
-	np.cast:SetSize(d.width - d.castHeight - 2, d.castHeight)
+	-- with the kick icon on the right the bar is centred between the two icons
+	local withKick = d.kickIndicator and kick
+	np.cast:SetSize(d.width - (d.castHeight + 2) * (withKick and 2 or 1), d.castHeight)
 	np.cast:ClearAllPoints()
-	np.cast:SetPoint("TOP", d.nameAbove and np.health or np.name, "BOTTOM", (d.castHeight + 2) / 2, d.nameAbove and -4 or -3)
+	np.cast:SetPoint("TOP", d.nameAbove and np.health or np.name, "BOTTOM", withKick and 0 or (d.castHeight + 2) / 2, d.nameAbove and -4 or -3)
+	local cb = np.cast
+	cb.kick:SetSize(d.castHeight, d.castHeight)
+	B:SetFont(cb.kick.text, math.max(7, d.castHeight - 2))
+	cb.edge:Place(cb.icon, withKick and cb.kick or cb, px)
+	cb.tick:SetWidth(math.max(px * 2, 1))
+	np.absorb:SetWidth(d.width)
 	np.cast:SetStatusBarTexture(B:GetTexture())
 	np.cast.icon:SetSize(d.castHeight, d.castHeight)
 	B:SetFont(np.cast.text, math.max(7, d.castHeight - 1))
@@ -677,6 +924,17 @@ local function OnEvent(_, event, unit)
 		for _, np in pairs(active) do B:Try(UpdateHealth, np) end
 		return
 	end
+	if event == "SPELL_UPDATE_COOLDOWN" then
+		kickReady, kickReadyAt = KickState()
+		for _, np in pairs(active) do if np.cast:IsShown() then B:Try(UpdateKick, np) end end
+		return
+	end
+	if event == "SPELLS_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "UNIT_PET" then
+		M:FindKick()
+		kickReady, kickReadyAt = KickState()
+		for _, np in pairs(active) do B:Try(Layout, np); B:Try(UpdateKick, np) end
+		return
+	end
 	if event == "RAID_TARGET_UPDATE" then
 		for _, np in pairs(active) do UpdateRaidIcon(np) end
 		return
@@ -684,6 +942,7 @@ local function OnEvent(_, event, unit)
 	local np = type(unit) == "string" and active[unit]
 	if not np then return end
 	if event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" then UpdateHealth(np)
+	elseif event == "UNIT_ABSORB_AMOUNT_CHANGED" then UpdateAbsorb(np)
 	elseif event == "UNIT_AURA" then UpdateAuras(np)
 	elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_LEVEL" then UpdateName(np)
 	elseif event == "UNIT_FACTION" or event == "UNIT_THREAT_LIST_UPDATE" or event == "UNIT_POWER_UPDATE"
@@ -691,8 +950,8 @@ local function OnEvent(_, event, unit)
 	elseif event == "UNIT_THREAT_SITUATION_UPDATE" then UpdateThreat(np)
 	elseif castStart[event] ~= nil then CastStart(np, castStart[event])
 	elseif castStop[event] then CastStop(np)
-	elseif event == "UNIT_SPELLCAST_INTERRUPTIBLE" then CastColor(np.cast, false)
-	elseif event == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE" then CastColor(np.cast, true)
+	elseif event == "UNIT_SPELLCAST_INTERRUPTIBLE" then CastColor(np.cast, false); np.cast.notInt = false; np.cast.kick.state = nil; UpdateKick(np)
+	elseif event == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE" then CastColor(np.cast, true); np.cast.notInt = true; np.cast.kick.state = nil; UpdateKick(np)
 	end
 end
 
@@ -705,6 +964,7 @@ local EVENTS = {
 	"UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_EMPOWER_UPDATE", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_CHANNEL_STOP",
 	"UNIT_SPELLCAST_EMPOWER_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED",
 	"UNIT_SPELLCAST_INTERRUPTIBLE", "UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
+	"UNIT_ABSORB_AMOUNT_CHANGED", "SPELL_UPDATE_COOLDOWN", "SPELLS_CHANGED", "PLAYER_TALENT_UPDATE", "UNIT_PET",
 }
 
 function M:OnEnable()
@@ -713,6 +973,8 @@ function M:OnEnable()
 		return
 	end
 	self:ApplyCVars()
+	self:FindKick()
+	kickReady, kickReadyAt = KickState()
 	local f = CreateFrame("Frame")
 	for _, e in ipairs(EVENTS) do pcall(f.RegisterEvent, f, e) end
 	f:SetScript("OnEvent", B.Safe(OnEvent))
@@ -722,9 +984,11 @@ function M:OnEnable()
 		self.elapsed = self.elapsed + el
 		if self.elapsed < 0.1 then return end
 		self.elapsed = 0
+		if kick then kickReady, kickReadyAt = KickState() end
 		for _, np in pairs(active) do
 			local plate = np.plate
 			if plate and plate.bHide and plate:GetAlpha() ~= 0 then SetHidden(plate) end
+			if kick and np.cast:IsShown() then B:Try(UpdateKick, np) end
 		end
 	end)
 	-- plates that already exist (e.g. after /reload)

@@ -221,6 +221,8 @@ B.defaults = {
 		targetGlow = true, targetArrows = true,
 		targetColor = color(1, 1, 1),
 		castbar = true, castHeight = 10,
+		kickIndicator = true, kickColor = color(0.30, 1.00, 0.45),
+		absorbs = true,
 		debuffs = true, debuffSize = 22, debuffNum = 6, onlyMine = true,
 		buffs = true, buffSize = 20, buffNum = 4,
 		dispelGlow = true, glowColor = color(0.25, 0.85, 1.0),

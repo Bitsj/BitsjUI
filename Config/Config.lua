@@ -545,6 +545,10 @@ pages[#pages + 1] = { key = "nameplates", label = "Nameplates", build = function
 	lay:Header("Castbar")
 	O.check(lay, "Show castbar", "nameplates.castbar", "Nameplates")
 	O.slider(lay, "Castbar height", "nameplates.castHeight", 4, 24, 1, "Nameplates")
+	O.check(lay, "Interrupt indicator", "nameplates.kickIndicator", "Nameplates",
+		"Your interrupt next to enemy castbars. Green frame: your kick is ready. Grey icon: on cooldown, with a green line on the castbar where it comes back (red icon if it won't be back before the cast ends). Hidden on casts that can't be interrupted.")
+	O.color(lay, "Interrupt ready colour", "nameplates.kickColor", "Nameplates")
+	O.check(lay, "Absorb shields", "nameplates.absorbs", "Nameplates", "A light bar on the health bar for shields / absorbs on the unit.")
 	ReloadNotice(lay)
 end }
 
