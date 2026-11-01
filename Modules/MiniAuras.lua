@@ -71,6 +71,24 @@ function M:ApplyLayout()
 		B:Print("MiniAuras isn't loaded (or hasn't saved its settings yet). Log in once with it enabled, then try again.")
 		return
 	end
+	-- MiniAuras keeps the live settings at the top and a copy per profile;
+	-- write both so a profile switch / reload doesn't bring the old ones back
+	local roots = { db }
+	local prof = type(db.Profiles) == "table" and db.Profiles[db.ActiveProfile or "Default"]
+	if type(prof) == "table" and type(prof.Modules) == "table" then roots[2] = prof end
+	for _, root in ipairs(roots) do self:ApplyTo(root) end
+
+	B.global.miniAurasStyled = true
+	B.global.miniAurasLayout = M.LAYOUT_VERSION
+	B:Print("MiniAuras set up to match BitsjUI.")
+	-- no ReloadUI() here: Blizzard blocks it from addon code. The buttons that
+	-- call this are secure /reload buttons (B.Widgets.ReloadButton).
+end
+
+-- bump when the layout below changes, so people get asked once more
+M.LAYOUT_VERSION = 2
+
+function M:ApplyTo(db)
 	local m = db.Modules
 	-- look
 	if LibStub and LibStub("LibSharedMedia-3.0", true) then
@@ -128,10 +146,6 @@ function M:ApplyLayout()
 	local tex = B.db.general.texture
 	if type(tex) == "string" and tex:find("^Bitsj") then Set(m, "AllyKickTracker.Bars.Texture", tex) end
 
-	B.global.miniAurasStyled = true
-	B:Print("MiniAuras set up to match BitsjUI.")
-	-- no ReloadUI() here: Blizzard blocks it from addon code. The buttons that
-	-- call this are secure /reload buttons (B.Widgets.ReloadButton).
 end
 
 -- one-time question after login. A small frame of our own instead of a
@@ -160,7 +174,7 @@ function M:ShowPrompt()
 		local yes = W.ReloadButton(prompt, YES or "Yes", 120, 26, function() M:ApplyLayout() end)
 		yes:SetPoint("BOTTOMRIGHT", prompt, "BOTTOM", -6, 14)
 		local no = W.Button(prompt, NO or "No", 120, 26, function()
-			B.global.miniAurasStyled = true   -- don't ask again
+			B.global.miniAurasDeclined = true   -- don't ask again
 			prompt:Hide()
 		end)
 		no:SetPoint("BOTTOMLEFT", prompt, "BOTTOM", 6, 14)
@@ -173,9 +187,9 @@ function M:OnEnable()
 	-- MiniAuras ships LibSharedMedia; make sure our fonts are in it
 	B:RegisterSharedMedia()
 	RegisterProvider()
-	if not B.global.miniAurasStyled then
+	if (B.global.miniAurasLayout or 0) < M.LAYOUT_VERSION and not B.global.miniAurasDeclined then
 		C_Timer.After(6, function()
-			if M:Available() and not InCombatLockdown() and not B.global.miniAurasStyled then
+			if M:Available() and not InCombatLockdown() then
 				M:ShowPrompt()
 			end
 		end)
