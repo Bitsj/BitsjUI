@@ -35,7 +35,8 @@ jobs:
         run: |
           v=$(grep -m1 '^## Version:' BitsjUI.toc | sed 's/## Version:[[:space:]]*//' | tr -d '\r[:space:]')
           echo "tag=v$v" >> "$GITHUB_OUTPUT"
-          if gh release view "v$v" >/dev/null 2>&1; then
+          # a manual "Run workflow" always builds (e.g. to retry a failed upload)
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ] && gh release view "v$v" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "v$v is already released, nothing to do."
           else
