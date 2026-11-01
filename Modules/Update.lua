@@ -24,6 +24,10 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
+	{ "1.1.0", {
+		"Unit frames fit around Blizzard's Cooldown Manager: player left, target right, moving with it as it grows or shrinks.",
+		"Character window: the stats list scrolls with the mouse wheel when it is too long.",
+	} },
 	{ "1.0.0", {
 		"First official release of BitsjUI.",
 		"Clean, rounded UI with its own menu (/bui) and drag and drop for every frame (/bui move).",
