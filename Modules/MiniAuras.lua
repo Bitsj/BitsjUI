@@ -194,6 +194,9 @@ function M:OnEnable()
 	RegisterProvider()
 	if (B.global.miniAurasLayout or 0) < M.LAYOUT_VERSION and not B.global.miniAurasDeclined then
 		C_Timer.After(6, function()
+			-- first-time setup asks about MiniAuras itself
+			local inst = _G.BitsjUIInstaller
+			if not B.global.installed or (inst and inst:IsShown()) then return end
 			if M:Available() and not InCombatLockdown() then
 				M:ShowPrompt()
 			end

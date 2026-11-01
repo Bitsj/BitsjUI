@@ -62,24 +62,53 @@ local steps = {
 		action = RecommendedCVars,
 	},
 	{
+		-- optional: party tracking comes from MiniAuras (formerly MiniCC)
+		title = "Party tracking (optional)",
+		text = function()
+			if _G.MiniAurasApi then
+				return "MiniAuras is installed. It adds crowd control, defensive and interrupt tracking to your party frames.\n\n"
+					.. "Set it up to fit BitsjUI: crowd control right of each party tile, defensives left of it, and the party interrupt tracker right under the party frames.\n\n"
+					.. "Skip this to keep MiniAuras as it is."
+			end
+			return "Crowd control, defensive and interrupt tracking on your party frames comes from the free addon |cffffffffMiniAuras|r (formerly MiniCC).\n\n"
+				.. "It's optional: BitsjUI works fine without it. Install MiniAuras from CurseForge or Wago if you want the tracking, then run |cffffffff/bui install|r again or use /bui > Party & raid > Fit MiniAuras to BitsjUI."
+		end,
+		button = function() return _G.MiniAurasApi and "Set up MiniAuras" or "Continue" end,
+		skip = function() return _G.MiniAurasApi ~= nil end,
+		action = function()
+			local MA = B:GetModule("MiniAuras")
+			if _G.MiniAurasApi and MA and MA:Available() then MA:ApplyLayout() end
+		end,
+	},
+	{
 		title = "All done!",
 		text = "Reload the UI to finish.\n\n"
 			.. "-  /bui opens the menu\n-  /bui move unlocks every frame for drag and drop\n-  Right-click the BitsjUI minimap button for move mode",
 		button = "Reload UI",
-		action = function()
-			B.global.installed = true
-			B.global.installVersion = INSTALL_VERSION
-			ReloadUI()
-		end,
+		reload = true,
 	},
 }
+
+local function Finish()
+	B.global.installed = true
+	B.global.installVersion = INSTALL_VERSION
+end
+
+local function Value(v)
+	if type(v) == "function" then return v() end
+	return v
+end
 
 local function Render()
 	local s = steps[step]
 	frame.title:SetText(s.title)
-	frame.text:SetText(s.text)
-	frame.next.text:SetText(s.button)
-	frame.skip:SetShown(s.skip and true or false)
+	frame.text:SetText(Value(s.text))
+	frame.next.text:SetText(Value(s.button))
+	frame.reload.text:SetText(Value(s.button))
+	-- the last step reloads through a secure button (Blizzard blocks ReloadUI from addons)
+	frame.next:SetShown(not s.reload)
+	frame.reload:SetShown(s.reload and true or false)
+	frame.skip:SetShown(Value(s.skip) and true or false)
 	frame.progress:SetText(step .. " / " .. #steps)
 	frame.fill:SetWidth(math.max(1, (frame:GetWidth() - 2) * step / #steps))
 end
@@ -120,6 +149,10 @@ local function Create()
 		if step < #steps then step = step + 1; Render() end
 	end)
 	frame.next:SetPoint("BOTTOMRIGHT", -24, 24)
+
+	frame.reload = W.ReloadButton(frame, "Reload UI", 200, 32, Finish)
+	frame.reload:SetPoint("BOTTOMRIGHT", -24, 24)
+	frame.reload:Hide()
 
 	frame.skip = W.Button(frame, "Skip", 120, 32, function()
 		if step < #steps then step = step + 1; Render() end

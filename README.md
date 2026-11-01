@@ -8,6 +8,9 @@ A clean, minimal UI for World of Warcraft **Retail (Midnight 12.x)** and **WoW F
 2. Start the game (or `/reload`). The setup opens on its own the first time.
 3. Turn on **Action Bar 2-5** under *Options > Gameplay > Action Bars* (so the keybinds work; BitsjUI hides Blizzard's graphics).
 
+## Optional: MiniAuras (party tracking)
+Crowd control, defensive and interrupt tracking on the party frames comes from the free addon **MiniAuras** (formerly MiniCC). It is **optional**: BitsjUI works fine without it, you just don't get that tracking. With MiniAuras installed, the setup (or `/bui` > Party & raid > *Fit MiniAuras to BitsjUI*) places and styles it to match BitsjUI's party frames.
+
 ## Commands
 | Command | What it does |
 |---|---|

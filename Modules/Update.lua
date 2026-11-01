@@ -24,6 +24,15 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
+	{ "1.3.0", {
+		"Party tracking with MiniAuras (formerly MiniCC): crowd control, defensives and the interrupt tracker fit BitsjUI's party frames. MiniAuras is optional and needed only for this tracking; set it up in the installer or /bui > Party & raid.",
+		"Nameplates: your interrupt next to enemy castbars. Green frame when it's ready, grey with a countdown when not, and a line on the castbar where it comes back.",
+		"Shields / absorbs on nameplates, unit frames and party / raid frames.",
+		"Target frame: a buff row above the debuffs.",
+		"Party and raid frames show the unit tooltip on hover.",
+		"Fixed: reload buttons were blocked by the game (\"Interface action failed\").",
+		"Fixed: an error about nameplates after changing the UI scale in a dungeon.",
+	} },
 	{ "1.1.2", {
 		"Fixed: the \"What's new\" window cut its text off after the first line.",
 	} },

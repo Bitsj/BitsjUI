@@ -320,6 +320,10 @@ pages[#pages + 1] = { key = "raidframes", label = "Party & raid", build = functi
 	lay:Add(W.Button(lay.content, "Preview raid (40)", 160, 26, function() RF:SetPreview("raid40") end))
 	lay:Add(W.Button(lay.content, "Hide preview", 140, 26, function() RF:SetPreview(nil) end))
 	lay:NewLine()
+	if not _G.MiniAurasApi then
+		lay:Header("MiniAuras (optional)")
+		lay:Text("Crowd control, defensive and interrupt tracking on the party frames comes from the free addon MiniAuras (formerly MiniCC). BitsjUI works fine without it. Install MiniAuras from CurseForge or Wago if you want the tracking; a button to fit it to BitsjUI shows up here once it is installed.")
+	end
 	if _G.MiniAurasApi then
 		lay:Header("MiniAuras")
 		lay:Text("MiniAuras puts its crowd control, defensive and important-buff icons on BitsjUI's party and raid tiles. This button sets its size, placement and font to match BitsjUI: crowd control right of each party tile, defensives left of it, and the party interrupt tracker right under the party frames. Reloads the UI.")
