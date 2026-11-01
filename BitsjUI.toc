@@ -4,6 +4,7 @@
 ## Author: Bitsj
 ## Version: 1.1.2
 ## X-Wago-ID: 5NRgXp63
+## X-Curse-Project-ID: 1777090
 ## Category: User Interface
 ## IconTexture: Interface\AddOns\BitsjUI\Media\Textures\Logo
 ## SavedVariables: BitsjUIDB
