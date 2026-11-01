@@ -129,19 +129,44 @@ function M:ApplyLayout()
 	if type(tex) == "string" and tex:find("^Bitsj") then Set(m, "AllyKickTracker.Bars.Texture", tex) end
 
 	B.global.miniAurasStyled = true
-	B:Print("MiniAuras set up to match BitsjUI. Reloading...")
-	-- ReloadUI only works straight from a click (it's a protected call),
-	-- so it runs right here, inside the button / popup click
-	ReloadUI()
+	B:Print("MiniAuras set up to match BitsjUI.")
+	-- no ReloadUI() here: Blizzard blocks it from addon code. The buttons that
+	-- call this are secure /reload buttons (B.Widgets.ReloadButton).
 end
 
-StaticPopupDialogs["BITSJUI_MINIAURAS"] = {
-	text = "BitsjUI found MiniAuras.\n\nSet MiniAuras up to fit BitsjUI's party and raid frames? (Reloads the UI.)",
-	button1 = YES, button2 = NO,
-	OnAccept = function() M:ApplyLayout() end,
-	OnCancel = function() B.global.miniAurasStyled = true end,   -- don't ask again
-	timeout = 0, whileDead = true, hideOnEscape = true,
-}
+-- one-time question after login. A small frame of our own instead of a
+-- StaticPopup, so the Yes button can be a secure /reload button.
+local prompt
+function M:ShowPrompt()
+	local W = B.Widgets
+	if not W or InCombatLockdown() then return end
+	if not prompt then
+		prompt = CreateFrame("Frame", "BitsjUIMiniAurasPrompt", UIParent)
+		prompt:SetSize(340, 120)
+		prompt:SetPoint("TOP", 0, -160)
+		prompt:SetFrameStrata("DIALOG")
+		prompt:EnableMouse(true)
+		local bg = prompt:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints()
+		bg:SetColorTexture(0.06, 0.06, 0.07, 0.95)
+		B:CreateBorder(prompt, 0, 0, 0, 1)
+		local text = prompt:CreateFontString(nil, "OVERLAY")
+		B:SetFont(text, 13)
+		text:SetPoint("TOPLEFT", 14, -14)
+		text:SetPoint("TOPRIGHT", -14, -14)
+		text:SetJustifyH("CENTER")
+		text:SetWordWrap(true)
+		text:SetText("BitsjUI found MiniAuras.\nSet it up to fit BitsjUI's party and raid frames?\n(Reloads the UI.)")
+		local yes = W.ReloadButton(prompt, YES or "Yes", 120, 26, function() M:ApplyLayout() end)
+		yes:SetPoint("BOTTOMRIGHT", prompt, "BOTTOM", -6, 14)
+		local no = W.Button(prompt, NO or "No", 120, 26, function()
+			B.global.miniAurasStyled = true   -- don't ask again
+			prompt:Hide()
+		end)
+		no:SetPoint("BOTTOMLEFT", prompt, "BOTTOM", 6, 14)
+	end
+	prompt:Show()
+end
 
 function M:OnEnable()
 	if not _G.MiniAurasApi then return end
@@ -151,7 +176,7 @@ function M:OnEnable()
 	if not B.global.miniAurasStyled then
 		C_Timer.After(6, function()
 			if M:Available() and not InCombatLockdown() and not B.global.miniAurasStyled then
-				StaticPopup_Show("BITSJUI_MINIAURAS")
+				M:ShowPrompt()
 			end
 		end)
 	end

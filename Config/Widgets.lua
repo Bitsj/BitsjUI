@@ -53,8 +53,8 @@ end
 -------------------------------------------------------------------------------
 -- Button
 -------------------------------------------------------------------------------
-function W.Button(parent, text, width, height, onClick, tooltip)
-	local b = CreateFrame("Button", nil, parent)
+function W.Button(parent, text, width, height, onClick, tooltip, template)
+	local b = CreateFrame("Button", nil, parent, template)
 	b:SetSize(width or 140, height or 26)
 	b.bg = W.Fill(b, C.element)
 	B:CreateBorder(b, 0, 0, 0, 1)
@@ -67,8 +67,36 @@ function W.Button(parent, text, width, height, onClick, tooltip)
 		self.bg:SetColorTexture(r * 0.35, g * 0.35, bl * 0.35, 1)
 	end)
 	b:SetScript("OnLeave", function(self) self.bg:SetColorTexture(C.element[1], C.element[2], C.element[3], 1) end)
-	b:SetScript("OnClick", function(self, ...) if onClick then onClick(self, ...) end end)
+	if template then
+		-- secure buttons keep their own OnClick; run ours just before it
+		if onClick then b:SetScript("PreClick", function(self, ...) onClick(self, ...) end) end
+	else
+		b:SetScript("OnClick", function(self, ...) if onClick then onClick(self, ...) end end)
+	end
 	AddTooltip(b, text, tooltip)
+	return b
+end
+
+-- A button that runs onClick and then reloads the UI. The reload goes through
+-- a secure /reload macro, because Blizzard blocks ReloadUI() called by addons.
+function W.ReloadButton(parent, text, width, height, onClick, tooltip)
+	if InCombatLockdown() then
+		return W.Button(parent, text, width, height, function(...)
+			if onClick then onClick(...) end
+			B:Print("Done. Type /reload to apply it.")
+		end, tooltip)
+	end
+	local b = W.Button(parent, text, width, height, nil, tooltip, "SecureActionButtonTemplate")
+	b:RegisterForClicks("AnyUp", "AnyDown")
+	b:SetAttribute("type", "macro")
+	b:SetAttribute("macrotext", "/reload")
+	if onClick then
+		-- the click fires on key down or key up depending on a CVar: run once
+		b:SetScript("PreClick", function(self, button, down)
+			local useDown = GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")
+			if (down and true or false) == (useDown and true or false) then onClick(self, button, down) end
+		end)
+	end
 	return b
 end
 

@@ -270,7 +270,13 @@ end
 -- size of one physical pixel in the coordinate space of `frame`
 function B:Pixel(frame)
 	local h = self.screenHeight or 1440
-	local scale = (frame and frame.GetEffectiveScale and frame:GetEffectiveScale()) or UIParent:GetEffectiveScale()
+	local scale
+	-- frames on enemy nameplates turn forbidden inside instances; reading them throws
+	if frame and frame.GetEffectiveScale and not (frame.IsForbidden and frame:IsForbidden()) then
+		local ok, s = pcall(frame.GetEffectiveScale, frame)
+		if ok then scale = s end
+	end
+	scale = scale or UIParent:GetEffectiveScale()
 	if not scale or scale == 0 then scale = 1 end
 	return 768 / h / scale
 end

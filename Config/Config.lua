@@ -315,7 +315,7 @@ pages[#pages + 1] = { key = "raidframes", label = "Party & raid", build = functi
 	if _G.MiniAurasApi then
 		lay:Header("MiniAuras")
 		lay:Text("MiniAuras puts its crowd control, defensive and important-buff icons on BitsjUI's party and raid tiles. This button sets its size, placement and font to match BitsjUI: crowd control right of each party tile, defensives left of it, and the party interrupt tracker right under the party frames. Reloads the UI.")
-		lay:Add(W.Button(lay.content, "Fit MiniAuras to BitsjUI", 200, 26, function() B:GetModule("MiniAuras"):ApplyLayout() end))
+		lay:Add(W.ReloadButton(lay.content, "Fit MiniAuras to BitsjUI", 200, 26, function() B:GetModule("MiniAuras"):ApplyLayout() end))
 		lay:NewLine()
 	end
 	O.check(lay, "BitsjUI party / raid frames *", "raidframes.enabled", "RaidFrames")
@@ -1121,7 +1121,7 @@ local function CreateWindow()
 	W.Font(notice.text, 12)
 	notice.text:SetTextColor(1, 0.75, 0.3)
 	notice.text:SetText("Some changes need a reload")
-	local rb = W.Button(notice, "Reload now", 100, 24, function() ReloadUI() end)
+	local rb = W.ReloadButton(notice, "Reload now", 100, 24)
 	rb:SetPoint("RIGHT", notice, "RIGHT", 0, 0)
 	notice.text:SetPoint("RIGHT", rb, "LEFT", -8, 0)
 	notice:SetShown(Config.needsReload and true or false)
@@ -1258,7 +1258,7 @@ local function CreateWindow()
 	-- footer buttons in the sidebar
 	local unlock = W.Button(side, "Unlock frames", SIDEBAR - 24, 30, function() B.Movers:Toggle() end)
 	unlock:SetPoint("BOTTOM", 0, 52)
-	local reload = W.Button(side, "Reload UI", SIDEBAR - 24, 30, function() ReloadUI() end)
+	local reload = W.ReloadButton(side, "Reload UI", SIDEBAR - 24, 30)
 	reload:SetPoint("BOTTOM", 0, 14)
 
 	-- scrolling content

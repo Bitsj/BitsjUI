@@ -437,10 +437,13 @@ end
 
 function B:RefreshBorders()
 	for holder in pairs(bordered) do
-		if holder.bOffset and holder.bOffset > 0 then
-			holder.bOffset = B:Pixel(holder.bOwner) * (holder.bThickness or 1)
+		-- skip borders that sit on forbidden (nameplate) frames
+		if not (holder.IsForbidden and holder:IsForbidden()) then
+			if holder.bOffset and holder.bOffset > 0 then
+				holder.bOffset = B:Pixel(holder.bOwner) * (holder.bThickness or 1)
+			end
+			pcall(LayoutBorder, holder)
 		end
-		LayoutBorder(holder)
 	end
 end
 
