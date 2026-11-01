@@ -258,6 +258,13 @@ pages[#pages + 1] = { key = "unitframes", label = "Unit frames", build = functio
 	O.slider(lay, "Power text size", "unitframes.smallFontSize", 7, 20, 1, "UnitFrames")
 	O.slider(lay, "Name size", "unitframes.nameSize", 7, 20, 1, "UnitFrames")
 
+	if not B.isClassic then
+		lay:Header("Cooldown Manager")
+		lay:Text("Player and target frames sit on either side of Blizzard's Cooldown Manager (the Essential row) and move out or in as it grows or shrinks. Pet and target of target follow. Place the Cooldown Manager itself with Edit Mode.")
+		O.check(lay, "Fit around the Cooldown Manager", "unitframes.fitCDM", "UnitFrames")
+		O.slider(lay, "Gap to the Cooldown Manager", "unitframes.cdmGap", 0, 40, 1, "UnitFrames")
+	end
+
 	lay:Header("Choose frame")
 	local opts = {}
 	for _, def in ipairs(UF.UNITS) do opts[#opts + 1] = { value = def.key, label = def.label } end

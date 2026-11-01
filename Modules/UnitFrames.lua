@@ -764,7 +764,7 @@ function M:LayoutFrame(key)
 		UnregisterUnitWatch(f)
 		f:Hide()
 	end
-	B:SetMoverEnabled("uf_" .. key, c.enabled)
+	B:SetMoverEnabled("uf_" .. key, c.enabled and not (M.cdmFitted and M.CDM_FOLLOW[key]))
 	B.Movers:Apply("uf_" .. key)
 	if key == "target" then B:Try(LayoutAuraBox, f) end
 	B:Try(UpdateAll, f)
@@ -812,6 +812,80 @@ B:RegisterCallback("PREVIEW", function(on)
 end)
 
 -------------------------------------------------------------------------------
+-- Fit around the Cooldown Manager: the player frame sits left of Blizzard's
+-- Essential cooldowns, the target frame right of them, both centred on the
+-- same line; pet and target-of-target sit beside them. When the Cooldown
+-- Manager grows or shrinks (more / fewer spells) the frames move with it.
+-- Place the Cooldown Manager itself with Blizzard's Edit Mode.
+-------------------------------------------------------------------------------
+M.CDM_FOLLOW = { player = true, target = true, pet = true, targettarget = true }
+
+local function CDMBounds()
+	if not B.db.unitframes.fitCDM then return end
+	local v = _G.EssentialCooldownViewer
+	if not v or not v.GetLeft then return end
+	if C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("cooldownViewerEnabled") == "0" then return end
+	local l, r, b, t = v:GetLeft(), v:GetRight(), v:GetBottom(), v:GetTop()
+	if not (l and r and b and t) or r - l < 10 then return end
+	local s = v:GetEffectiveScale() / UIParent:GetEffectiveScale()
+	return l * s, r * s, (b + t) / 2 * s
+end
+
+-- put a frame's `point` at UIParent coordinates x, y (frames can have their own scale)
+local function PlaceAt(f, point, x, y)
+	local k = UIParent:GetEffectiveScale() / f:GetEffectiveScale()
+	f:ClearAllPoints()
+	f:SetPoint(point, UIParent, "BOTTOMLEFT", x * k, y * k)
+end
+
+function M:FitCDM()
+	local l, r, cy = CDMBounds()
+	local was = self.cdmFitted
+	self.cdmFitted = l ~= nil
+	if was ~= self.cdmFitted then
+		for key in pairs(self.CDM_FOLLOW) do
+			if self.frames[key] then B:SetMoverEnabled("uf_" .. key, cfg(key).enabled and not self.cdmFitted) end
+		end
+		-- back to the saved spots
+		if was and not self.cdmFitted then
+			for key in pairs(self.CDM_FOLLOW) do B.Movers:Apply("uf_" .. key) end
+		end
+	end
+	if not l then return end
+	if InCombatLockdown() then
+		B:RunOOC("uf_fitcdm", function() M:FitCDM() end)
+		return
+	end
+	local gap = B.db.unitframes.cdmGap or 12
+	local p, t = self.frames.player, self.frames.target
+	if p then PlaceAt(p, "RIGHT", l - gap, cy) end
+	if t then PlaceAt(t, "LEFT", r + gap, cy) end
+	local pet, tot = self.frames.pet, self.frames.targettarget
+	if pet and p then pet:ClearAllPoints(); pet:SetPoint("RIGHT", p, "LEFT", -gap, 0) end
+	if tot and t then tot:ClearAllPoints(); tot:SetPoint("LEFT", t, "RIGHT", gap, 0) end
+end
+
+-- run once per frame at most (size and position changes come in bursts)
+function M:QueueFitCDM()
+	if self.fitQueued then return end
+	self.fitQueued = true
+	C_Timer.After(0, function()
+		M.fitQueued = false
+		B:Try(M.FitCDM, M)
+	end)
+end
+
+function M:HookCDM()
+	local v = _G.EssentialCooldownViewer
+	if not v or v.bFitHooked then return end
+	v.bFitHooked = true
+	v:HookScript("OnSizeChanged", function() M:QueueFitCDM() end)
+	v:HookScript("OnShow", function() M:QueueFitCDM() end)
+	hooksecurefunc(v, "SetPoint", function() M:QueueFitCDM() end)
+	if v.SetScale then hooksecurefunc(v, "SetScale", function() M:QueueFitCDM() end) end
+	self:QueueFitCDM()
+end
+
 function M:OnEnable()
 	if not B.db.unitframes.enabled then return end
 	for _, def in ipairs(UNITS) do
@@ -820,6 +894,18 @@ function M:OnEnable()
 		if cfg(def.key).enabled then HideBlizzard(def) end
 		self:LayoutFrame(def.key)
 	end
+	-- the mover system re-applies saved spots; while fitted the Cooldown Manager decides
+	hooksecurefunc(B.Movers, "Apply", function(_, name)
+		local key = type(name) == "string" and name:match("^uf_(.+)$")
+		if key and M.CDM_FOLLOW[key] and M.cdmFitted then M:QueueFitCDM() end
+	end)
+	hooksecurefunc(B.Movers, "ApplyAll", function() M:QueueFitCDM() end)
+	self:HookCDM()
+	B:RegisterEvent("ADDON_LOADED", function(_, name)
+		if name == "Blizzard_CooldownViewer" then M:HookCDM() end
+	end)
+	B:RegisterEvent("PLAYER_ENTERING_WORLD", function() C_Timer.After(1, function() M:HookCDM(); M:QueueFitCDM() end) end)
+	B:RegisterEvent("CVAR_UPDATE", function() M:QueueFitCDM() end)
 end
 
 function M:Update()
@@ -830,4 +916,5 @@ function M:Update()
 			self:LayoutFrame(def.key)
 		end
 	end
+	self:QueueFitCDM()
 end

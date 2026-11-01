@@ -383,6 +383,83 @@ function M:ExtraBlock()
 	local dr = low < 25 and "|cffff5050" or low < 50 and "|cffffd060" or "|cff5fe08a"
 	e.rows[3].Value:SetFormattedText("%s%d%%|r", dr, low)
 	e:SetShown(db().extraStats)
+	C_Timer.After(0, function() B:Try(M.UpdateStatScroll, M) end)
+end
+
+-------------------------------------------------------------------------------
+-- Stats scroll: Blizzard's stat list has a fixed height; with the extra
+-- block it can run past the bottom of the window. The pane goes into a
+-- scroll frame (clipped to the window) and scrolls with the mouse wheel,
+-- with a thin bar on the right when there is more to see.
+-------------------------------------------------------------------------------
+function M:SetupStatScroll()
+	local pane, cf = CharacterStatsPane, CharacterFrame
+	local inset = cf and (cf.InsetRight or _G.CharacterFrameInsetRight)
+	if self.statScroll or not pane or not inset or _G.CharacterStatsPaneScrollBox then return end
+	local sf = CreateFrame("ScrollFrame", "BitsjUIStatScroll", cf)
+	sf:SetPoint("TOPLEFT", inset, "TOPLEFT", 3, -3)
+	sf:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -3, 2)
+	sf:SetFrameLevel(pane:GetFrameLevel())
+	pane:ClearAllPoints()
+	sf:SetScrollChild(pane)
+	pane:SetPoint("TOPLEFT", sf, "TOPLEFT", 0, 0)
+	pane:SetSize(sf:GetWidth() > 1 and sf:GetWidth() or 196, sf:GetHeight() > 1 and sf:GetHeight() or 350)
+	sf:EnableMouseWheel(true)
+	sf:SetScript("OnMouseWheel", function(self, delta)
+		local max = self.bMax or 0
+		self:SetVerticalScroll(math.max(0, math.min(max, self:GetVerticalScroll() - delta * 40)))
+		M:UpdateScrollBar()
+	end)
+	-- the stats only show on the Character tab. Follow Blizzard's Show/Hide
+	-- calls themselves: OnShow never fires while our scroll frame is hidden,
+	-- so hooking that would keep both hidden for good.
+	local function follow()
+		sf:SetShown(pane:IsShown())
+		if pane:IsShown() then C_Timer.After(0, function() B:Try(M.UpdateStatScroll, M) end) end
+	end
+	hooksecurefunc(pane, "Show", follow)
+	hooksecurefunc(pane, "Hide", follow)
+	hooksecurefunc(pane, "SetShown", follow)
+	follow()
+	local bar = sf:CreateTexture(nil, "OVERLAY")
+	bar:SetWidth(3)
+	sf.bBar = bar
+	self.statScroll = sf
+end
+
+function M:UpdateScrollBar()
+	local sf = self.statScroll
+	if not sf then return end
+	local max, h = sf.bMax or 0, sf:GetHeight()
+	if max <= 0 or h <= 0 then sf.bBar:Hide(); return end
+	local thumb = math.max(20, h * h / (h + max))
+	local y = (h - thumb) * (sf:GetVerticalScroll() / max)
+	sf.bBar:ClearAllPoints()
+	sf.bBar:SetPoint("TOPRIGHT", sf, "TOPRIGHT", 0, -y)
+	sf.bBar:SetHeight(thumb)
+	sf.bBar:SetColorTexture(B:AccentColor())
+	sf.bBar:SetAlpha(0.6)
+	sf.bBar:Show()
+end
+
+function M:UpdateStatScroll()
+	local sf, pane = self.statScroll, CharacterStatsPane
+	if not sf or not pane then return end
+	local w, h = sf:GetWidth(), sf:GetHeight()
+	if w <= 1 or h <= 1 then return end
+	-- how far the content reaches below the top of the pane
+	local top, bottom = pane:GetTop(), nil
+	for _, child in ipairs({ pane:GetChildren() }) do
+		if child:IsShown() then
+			local b = child:GetBottom()
+			if b and (not bottom or b < bottom) then bottom = b end
+		end
+	end
+	local content = (top and bottom) and (top - bottom + 8) or h
+	pane:SetSize(w, math.max(h, content))
+	sf.bMax = math.max(0, content - h)
+	if sf:GetVerticalScroll() > sf.bMax then sf:SetVerticalScroll(sf.bMax) end
+	self:UpdateScrollBar()
 end
 
 function M:UpdateStats()
@@ -595,8 +672,12 @@ function M:Skin()
 	end
 	for i = 1, 4 do B:SkinTab(_G["CharacterFrameTab" .. i]) end
 	if PaperDollFrame_UpdateStats then
-		hooksecurefunc("PaperDollFrame_UpdateStats", function() B:Try(M.UpdateStats, M) end)
+		hooksecurefunc("PaperDollFrame_UpdateStats", function()
+			B:Try(M.UpdateStats, M)
+			C_Timer.After(0, function() B:Try(M.UpdateStatScroll, M) end)
+		end)
 	end
+	B:Try(M.SetupStatScroll, M)
 	-- average item level next to the title
 	local o = CreateFrame("Frame", nil, cf)
 	o:SetAllPoints(cf)

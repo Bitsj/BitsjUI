@@ -102,6 +102,8 @@ B.defaults = {
 
 	unitframes = {
 		enabled = true,
+		fitCDM = true,               -- player / target frames sit beside Blizzard's Cooldown Manager
+		cdmGap = 12,
 		style = "clean",             -- clean (slim bars) | portrait
 		healthColor = "class",       -- class | dark | custom
 		customHealth = color(0.25, 0.75, 0.35),
