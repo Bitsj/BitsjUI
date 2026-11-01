@@ -391,6 +391,19 @@ pages[#pages + 1] = { key = "buffs", label = "Buffs", build = function(lay)
 	lay:Text("Move the buff block with /bui move (\"Buffs\").")
 end }
 
+pages[#pages + 1] = { key = "defensives", label = "Defensives", build = function(lay)
+	lay:Header("Defensives")
+	lay:Text("Icons right above your player frame while a defensive is active on you: your own (Divine Shield, Ice Block, Barkskin, Shield Wall, Astral Shift...) and ones others cast on you (Pain Suppression, Blessing of Protection, Ironbark...). All classes are covered. The sweep and number show the time left.")
+	O.check(lay, "Show defensives *", "defensives.enabled", "Defensives")
+	O.check(lay, "Above the player frame", "defensives.attach", "Defensives", "Turn off to place the icons freely with /bui move.")
+	O.slider(lay, "Icon size *", "defensives.size", 16, 48, 1, "Defensives")
+	O.slider(lay, "Spacing", "defensives.spacing", 0, 10, 1, "Defensives")
+	O.slider(lay, "Gap above the name", "defensives.gap", 0, 30, 1, "Defensives")
+	O.slider(lay, "Max icons", "defensives.max", 1, 10, 1, "Defensives")
+	O.input(lay, "Also show (spell IDs, comma separated)", "defensives.extra", "Defensives")
+	O.input(lay, "Never show (spell IDs, comma separated)", "defensives.ignore", "Defensives")
+end }
+
 pages[#pages + 1] = { key = "swing", label = "Swing timer", build = function(lay)
 	lay:Header("Swing timer")
 	lay:Text("Bars right above your castbar for your next white hit: main hand, off hand (dual wield) and ranged (Auto Shot, wands, throwing). They pop up while running or while you auto-attack. Heroic Strike, Cleave, Maul and Raptor Strike count as swings, and parrying speeds up your swing like it does in the game.")
@@ -877,6 +890,7 @@ local META = {
 	castbars    = { "Combat", "Player, target and focus castbars: size, colours, icon and where they sit." },
 	timers      = { "Combat", "Bars for your own debuffs on the target, with time left." },
 	swing       = { "Combat", "Melee and ranged swing timers right above your castbar." },
+	defensives  = { "Combat", "Your active defensives (and ones cast on you) as icons above the player frame." },
 	classpower  = { "Combat", "Holy Power, combo points, runes and other class resources." },
 	unitframes  = { "Frames", "Player, target, focus, pet and target-of-target frames." },
 	raidframes  = { "Frames", "Party and raid frames, with separate settings for each. Use Preview to set them up solo." },

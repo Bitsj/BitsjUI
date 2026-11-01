@@ -176,6 +176,14 @@ B.defaults = {
 		focus = { enabled = true, width = 140, height = 14, icon = true, timer = true, latency = false, spark = true, attach = false },
 	},
 
+	defensives = {
+		enabled = true,
+		attach = true,               -- right above the player frame (over the name)
+		size = 28, spacing = 3, gap = 4, max = 6,
+		extra = "",                  -- more spell IDs to show (comma separated)
+		ignore = "",                 -- built-in spell IDs to leave out
+	},
+
 	swing = {
 		enabled = true,
 		attachToCastbar = true,      -- right above the player castbar, same width
