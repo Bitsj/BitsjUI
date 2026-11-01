@@ -303,6 +303,11 @@ pages[#pages + 1] = { key = "unitframes", label = "Unit frames", build = functio
 		lay:NewLine()
 		O.slider(lay, "Count", p .. "auras.num", 1, 16, 1, "UnitFrames")
 		O.slider(lay, "Size *", p .. "auras.size", 14, 48, 1, "UnitFrames")
+		lay:Header("Target buffs")
+		lay:Text("A second row with the target's buffs, right above its debuffs.")
+		O.check(lay, "Show buffs", p .. "targetBuffs.enabled", "UnitFrames")
+		O.slider(lay, "Count", p .. "targetBuffs.num", 1, 16, 1, "UnitFrames")
+		O.slider(lay, "Size *", p .. "targetBuffs.size", 14, 48, 1, "UnitFrames")
 	end
 	ReloadNotice(lay)
 end }

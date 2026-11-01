@@ -274,9 +274,8 @@ end
 -------------------------------------------------------------------------------
 -- Target auras
 -------------------------------------------------------------------------------
-local function AuraButton(f, i)
-	f.auras = f.auras or {}
-	local btn = f.auras[i]
+local function AuraButton(f, list, i)
+	local btn = list[i]
 	if btn then return btn end
 	btn = CreateFrame("Button", nil, f)
 	btn:EnableMouse(true)
@@ -302,7 +301,7 @@ local function AuraButton(f, i)
 		GameTooltip:Show()
 	end)
 	btn:SetScript("OnLeave", GameTooltip_Hide)
-	f.auras[i] = btn
+	list[i] = btn
 	return btn
 end
 
@@ -340,63 +339,106 @@ local function AuraFilter(a)
 	return filter
 end
 
--- 12.1+: let the client handle target auras through an AuraContainer
-local function LayoutAuraBox(f)
+-- Two rows on the target: debuffs (or buffs, if chosen) right by the frame,
+-- and a buff row stacked on the outside of it.
+local function Rows(f)
 	local a = cfg(f.key).auras
-	if not a or not B:HasAuraContainers() then return end
-	if not f.auraBox then
-		f.auraBox = B:CreateAuraBox(f, { { key = "auras", filter = AuraFilter(a), max = a.num } }, a.size)
-		if not f.auraBox then return end
-		B:SetAuraBoxUnit(f.auraBox, f.unit)
+	local tb = cfg(f.key).targetBuffs
+	local rows = {}
+	if a then rows[1] = { key = "auras", c = a, filter = AuraFilter(a), on = a.enabled } end
+	if tb then
+		-- no second buff row when the first row already shows buffs
+		rows[#rows + 1] = { key = "buffs", c = tb, filter = "HELPFUL", on = tb.enabled and not (a and a.buffs) }
 	end
-	f.auraBox:ClearAllPoints()
-	f.auraBox:SetSize(a.num * (a.size + a.spacing), a.size)
-	if B.db.unitframes.style == "clean" then
-		f.auraBox:SetPoint("BOTTOMLEFT", f.bars, "TOPLEFT", 0, 18)
-		pcall(f.auraBox.SetFlowLayoutAnchorPoint, f.auraBox, "BOTTOMLEFT")
-	else
-		f.auraBox:SetPoint("TOPLEFT", f.bars, "BOTTOMLEFT", 0, -5)
+	return rows
+end
+
+-- distance of a row from the frame edge (the buff row sits past the first row)
+local function RowOffset(f, row)
+	if row.key ~= "buffs" then return 0 end
+	local a = cfg(f.key).auras
+	if a and a.enabled then return a.size + 4 end
+	return 0
+end
+
+-- 12.1+: let the client handle target auras through AuraContainers
+local function LayoutAuraBox(f)
+	if not B:HasAuraContainers() then return end
+	f.auraBoxes = f.auraBoxes or {}
+	local clean = B.db.unitframes.style == "clean"
+	for _, row in ipairs(Rows(f)) do
+		local c = row.c
+		local box = f.auraBoxes[row.key]
+		if not box then
+			box = B:CreateAuraBox(f, { { key = row.key, filter = row.filter, max = c.num } }, c.size)
+			if box then
+				B:SetAuraBoxUnit(box, f.unit)
+				f.auraBoxes[row.key] = box
+				if row.key == "auras" then f.auraBox = box end
+			end
+		end
+		if box then
+			local off = RowOffset(f, row)
+			box:ClearAllPoints()
+			box:SetSize(c.num * (c.size + c.spacing), c.size)
+			if clean then
+				box:SetPoint("BOTTOMLEFT", f.bars, "TOPLEFT", 0, 18 + off)
+				pcall(box.SetFlowLayoutAnchorPoint, box, "BOTTOMLEFT")
+			else
+				box:SetPoint("TOPLEFT", f.bars, "BOTTOMLEFT", 0, -5 - off)
+			end
+			pcall(box.SetAuraGroupFilterString, box, row.key, row.filter)
+			B:UpdateAuraBox(box, c.size, { [row.key] = row.on and c.num or 0 })
+			box:SetShown(row.on)
+		end
 	end
-	pcall(f.auraBox.SetAuraGroupFilterString, f.auraBox, "auras", AuraFilter(a))
-	B:UpdateAuraBox(f.auraBox, a.size, { auras = a.enabled and a.num or 0 })
-	f.auraBox:SetShown(a.enabled)
 end
 M.LayoutAuraBox = LayoutAuraBox
 
 local function UpdateAuras(f)
-	local a = cfg(f.key).auras
-	if not a then return end
 	if f.auraBox then return end
-	local shown = 0
-	if a.enabled and UnitExists(f.unit) and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-		local isDebuff = not a.buffs
-		local filter = isDebuff and "HARMFUL" or "HELPFUL"
-		if a.onlyPlayer then filter = filter .. "|PLAYER" end
-		local mirrored = f.def.mirrored
-		for i = 1, 40 do
-			if shown >= a.num then break end
-			local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, f.unit, i, filter)
-			if not ok or type(aura) ~= "table" then break end
-			shown = shown + 1
-			local btn = AuraButton(f, shown)
-			btn:SetSize(a.size, a.size)
-			btn:ClearAllPoints()
-			local x = (shown - 1) * (a.size + a.spacing)
-			if mirrored then
-				btn:SetPoint("TOPRIGHT", f.bars, "BOTTOMRIGHT", -x, -5)
-			else
-				btn:SetPoint("TOPLEFT", f.bars, "BOTTOMLEFT", x, -5)
+	f.auraLists = f.auraLists or {}
+	local mirrored = f.def.mirrored
+	local clean = B.db.unitframes.style == "clean"
+	for _, row in ipairs(Rows(f)) do
+		local c = row.c
+		local list = f.auraLists[row.key] or {}
+		f.auraLists[row.key] = list
+		if row.key == "auras" then f.auras = list end
+		local shown = 0
+		if row.on and UnitExists(f.unit) and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+			local filter = row.filter
+			local isDebuff = filter:find("HARMFUL") ~= nil
+			local off = RowOffset(f, row)
+			for i = 1, 40 do
+				if shown >= c.num then break end
+				local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, f.unit, i, filter)
+				if not ok or type(aura) ~= "table" then break end
+				shown = shown + 1
+				local btn = list[shown] or AuraButton(f, list, shown)
+				btn:SetSize(c.size, c.size)
+				btn:ClearAllPoints()
+				local x = (shown - 1) * (c.size + c.spacing)
+				if clean then
+					if mirrored then
+						btn:SetPoint("BOTTOMRIGHT", f.bars, "TOPRIGHT", -x, 18 + off)
+					else
+						btn:SetPoint("BOTTOMLEFT", f.bars, "TOPLEFT", x, 18 + off)
+					end
+				elseif mirrored then
+					btn:SetPoint("TOPRIGHT", f.bars, "BOTTOMRIGHT", -x, -5 - off)
+				else
+					btn:SetPoint("TOPLEFT", f.bars, "BOTTOMLEFT", x, -5 - off)
+				end
+				btn.index, btn.filter, btn.isDebuff = i, filter, isDebuff
+				btn.auraID = aura.auraInstanceID
+				pcall(btn.icon.SetTexture, btn.icon, aura.icon)
+				M.ApplyAuraCount(btn.count, f.unit, aura)
+				M.ApplyAuraCooldown(btn.cd, f.unit, aura)
+				btn:Show()
 			end
-			btn.index, btn.filter, btn.isDebuff = i, filter, isDebuff
-			btn.auraID = aura.auraInstanceID
-			pcall(btn.icon.SetTexture, btn.icon, aura.icon)
-			M.ApplyAuraCount(btn.count, f.unit, aura)
-			M.ApplyAuraCooldown(btn.cd, f.unit, aura)
-			btn:Show()
 		end
-	end
-	if f.auras then
-		for i = shown + 1, #f.auras do f.auras[i]:Hide() end
+		for i = shown + 1, #list do list[i]:Hide() end
 	end
 end
 
@@ -796,13 +838,13 @@ function M:PreviewFrame(f, on)
 		UnregisterUnitWatch(f)
 		f.unit = "player"
 		f:SetAttribute("unit", "player")
-		if f.auraBox then B:SetAuraBoxUnit(f.auraBox, "player") end
+		for _, box in pairs(f.auraBoxes or {}) do B:SetAuraBoxUnit(box, "player") end
 		f:Show()
 		B:Try(UpdateAll, f)
 	else
 		f.unit = f.def.unit
 		f:SetAttribute("unit", f.def.unit)
-		if f.auraBox then B:SetAuraBoxUnit(f.auraBox, f.def.unit) end
+		for _, box in pairs(f.auraBoxes or {}) do B:SetAuraBoxUnit(box, f.def.unit) end
 		if cfg(f.key).enabled then RegisterUnitWatch(f) else f:Hide() end
 		if UnitExists(f.unit) then B:Try(UpdateAll, f) end
 	end
