@@ -113,7 +113,9 @@ function M:ApplyLayout()
 
 	B.global.miniAurasStyled = true
 	B:Print("MiniAuras set up to match BitsjUI. Reloading...")
-	C_Timer.After(0.5, ReloadUI)
+	-- ReloadUI only works straight from a click (it's a protected call),
+	-- so it runs right here, inside the button / popup click
+	ReloadUI()
 end
 
 StaticPopupDialogs["BITSJUI_MINIAURAS"] = {
