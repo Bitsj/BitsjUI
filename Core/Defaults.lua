@@ -213,6 +213,9 @@ B.defaults = {
 		colorByType = true,
 		questColor = color(0.95, 0.80, 0.20),
 		casterColor = color(0.35, 0.55, 1.00),
+		neutralColor = color(0.76, 0.66, 0.42),   -- sandy, apart from the rogue's yellow
+		-- friendly plates; nil = keep the game's own setting until changed here
+		friendlyPlayers = nil, friendlyNPCs = nil,
 		meleeColor = color(0.95, 0.50, 0.15),
 		-- aggro indicator
 		threat = true,

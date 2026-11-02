@@ -58,7 +58,44 @@ function M:ApplyCVars()
 		SetCVarSafe("nameplateMaxDistance", d.maxDistance)
 		SetCVarSafe("ShowClassColorInNameplate", d.classColors and 1 or 0)
 		M:ApplyStacking(d.stacking)
+		M:ApplyFriendly()
 	end)
+end
+
+-- Friendly nameplates: players and NPCs, each on or off. The console
+-- variable names differ between game versions, so the client is asked for
+-- every on/off variable with "nameplate", "show" and "friend" in its name.
+local function FriendlyCVars()
+	local players, npcs = {}, {}
+	if C_Console and C_Console.GetAllCommands then
+		local ok, list = pcall(C_Console.GetAllCommands)
+		if ok and type(list) == "table" then
+			for _, c in ipairs(list) do
+				local name = type(c) == "table" and c.command
+				local lower = type(name) == "string" and name:lower()
+				if lower and lower:find("^nameplateshow") and lower:find("friend") then
+					local cur = C_CVar and C_CVar.GetCVar and C_CVar.GetCVar(name)
+					if cur == "0" or cur == "1" then
+						if lower:find("npc") then npcs[#npcs + 1] = name else players[#players + 1] = name end
+					end
+				end
+			end
+		end
+	end
+	if #players == 0 and C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("nameplateShowFriends") then players[1] = "nameplateShowFriends" end
+	if #npcs == 0 and C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("nameplateShowFriendlyNPCs") then npcs[1] = "nameplateShowFriendlyNPCs" end
+	return players, npcs
+end
+M.FriendlyCVars = FriendlyCVars
+
+function M:ApplyFriendly()
+	local d = db()
+	local players, npcs = FriendlyCVars()
+	-- first run: take over whatever the game has now
+	if d.friendlyPlayers == nil then d.friendlyPlayers = players[1] and C_CVar.GetCVar(players[1]) == "1" or false end
+	if d.friendlyNPCs == nil then d.friendlyNPCs = npcs[1] and C_CVar.GetCVar(npcs[1]) == "1" or false end
+	for _, name in ipairs(players) do pcall(SetCVar, name, d.friendlyPlayers and "1" or "0") end
+	for _, name in ipairs(npcs) do pcall(SetCVar, name, d.friendlyNPCs and "1" or "0") end
 end
 
 -- Midnight removed the old overlap CVars and added a separate "Stack
@@ -186,7 +223,7 @@ local function Color(unit)
 		end
 		if reaction then
 			if reaction <= 3 then r, g, b = 0.85, 0.2, 0.2
-			elseif reaction == 4 then r, g, b = 0.95, 0.8, 0.25
+			elseif reaction == 4 then local c = db().neutralColor or { r = 0.76, g = 0.66, b = 0.42 }; r, g, b = c.r, c.g, c.b
 			else r, g, b = 0.3, 0.8, 0.3 end
 		end
 	end)

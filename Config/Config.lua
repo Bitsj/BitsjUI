@@ -524,6 +524,10 @@ pages[#pages + 1] = { key = "nameplates", label = "Nameplates", build = function
 	O.check(lay, "Show level", "nameplates.showLevel", "Nameplates")
 	O.check(lay, "Name above the bar", "nameplates.nameAbove", "Nameplates")
 	O.check(lay, "Stack plates (no overlap) *", "nameplates.stacking", "Nameplates")
+	O.check(lay, "Friendly player nameplates", "nameplates.friendlyPlayers", function() B:RunOOC("np_friendly", function() B:GetModule("Nameplates"):ApplyFriendly() end) end,
+		"Nameplates over friendly players (your group, your faction). Changes in combat apply when the fight ends.")
+	O.check(lay, "Friendly NPC nameplates", "nameplates.friendlyNPCs", function() B:RunOOC("np_friendly", function() B:GetModule("Nameplates"):ApplyFriendly() end) end,
+		"Nameplates over friendly NPCs (guards, vendors, quest givers).")
 	O.dropdown(lay, "Health text", "nameplates.healthText", {
 		{ value = "both", label = "2.0K (64.1%)" },
 		{ value = "value", label = "2.0K" },
@@ -548,6 +552,7 @@ pages[#pages + 1] = { key = "nameplates", label = "Nameplates", build = function
 	O.color(lay, "Quest mobs", "nameplates.questColor", "Nameplates")
 	O.color(lay, "Casters", "nameplates.casterColor", "Nameplates")
 	O.color(lay, "Melee (elites)", "nameplates.meleeColor", "Nameplates")
+	O.color(lay, "Neutral mobs", "nameplates.neutralColor", "Nameplates")
 
 	lay:Header("Aggro")
 	O.check(lay, "Show aggro edge", "nameplates.threat", "Nameplates",
