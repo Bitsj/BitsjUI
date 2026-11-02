@@ -1516,19 +1516,46 @@ SlashCmdList.BITSJUI = function(msg)
 	elseif cmd == "npdebug" then
 		B:GetModule("Nameplates"):ShowDebug()
 	elseif cmd == "fonts" then
-		-- which font files the game can load (for fonts missing from the list)
+		-- which font files the game can load. Checks every second for 15 seconds
+		-- (fonts load in the background), then prints one line per font.
 		local list = {}
 		for name, file in pairs(B.media.fonts) do list[name] = file end
-		-- test copies: a font that works, written into the Extra folder
 		list["TEST copy of Outfit"] = B.mediaPath .. "Fonts\\Extra\\TestOutfit.ttf"
 		list["TEST copy of Outfit (Fonts folder)"] = B.mediaPath .. "Fonts\\TestOutfit.ttf"
-		for name, file in pairs(list) do
-			local probe = UIParent:CreateFontString(nil, "BACKGROUND")
-			local ok, result = pcall(probe.SetFont, probe, file, 12, "")
-			if ok and result ~= false then probe:SetText("Expressway 123") end
-			B:Print(string.format("%s: loads=%s, result=%s, width=%.1f, path=%s", name, tostring(ok), tostring(result),
-				probe:GetStringWidth() or 0, tostring((probe:GetFont()))))
+		local holder = CreateFrame("Frame", nil, UIParent)
+		holder:SetSize(1, 1); holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", -500, 500); holder:Show()
+		local fs, state = {}, {}
+		local function check()
+			for name, file in pairs(list) do
+				if state[name] ~= "OK" then
+					fs[name] = fs[name] or holder:CreateFontString(nil, "OVERLAY")
+					local ok, result = pcall(fs[name].SetFont, fs[name], file, 14, "")
+					if not ok then state[name] = "MISSING (file not found)"
+					elseif result == false then state[name] = "NOT LOADED"
+					else fs[name]:SetText("Expressway 123"); state[name] = "OK" end
+				end
+			end
 		end
+		check()
+		B:Print("Checking fonts for 15 seconds...")
+		local n = 0
+		local ticker
+		ticker = C_Timer.NewTicker(1, function()
+			n = n + 1
+			check()
+			if n >= 15 then
+				ticker:Cancel()
+				local names = {}
+				for name in pairs(list) do names[#names + 1] = name end
+				table.sort(names)
+				local good, bad = {}, {}
+				for _, name in ipairs(names) do
+					if state[name] == "OK" then good[#good + 1] = name else bad[#bad + 1] = name .. " = " .. state[name] end
+				end
+				B:Print("|cff55ff55Loaded:|r " .. table.concat(good, ", "))
+				B:Print("|cffff5555Not loaded:|r " .. table.concat(bad, ", "))
+			end
+		end)
 	elseif cmd == "errors" or cmd == "error" then
 		Config:Show("errors")
 	elseif cmd == "install" then
