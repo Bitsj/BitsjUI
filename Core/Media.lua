@@ -102,13 +102,16 @@ function B.FontWorks(file)
 	local current = probe:GetFont()
 	-- SetFont returns false on a missing file in modern clients
 	ok = ok and result ~= false and current ~= nil and current:lower():gsub("/", "\\") == file:lower()
-	-- and a font that really loaded draws visible text
-	if ok then
+	-- modern clients say "true" when the file loaded. Only clients that say
+	-- nothing get the width test: a font file the game sees for the first
+	-- time can measure 0 wide until it has finished loading.
+	if ok and result ~= true then
 		probe:SetText("Expressway 123")
 		local w = probe:GetStringWidth()
 		ok = (w or 0) > 1
 	end
-	fontOK[file] = ok
+	-- only remember a yes; a no is checked again next time
+	if ok then fontOK[file] = true end
 	return ok
 end
 

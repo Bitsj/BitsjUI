@@ -1515,6 +1515,15 @@ SlashCmdList.BITSJUI = function(msg)
 		B:Print("BitsjUI errors logged: " .. errs .. " (/bui errors)")
 	elseif cmd == "npdebug" then
 		B:GetModule("Nameplates"):ShowDebug()
+	elseif cmd == "fonts" then
+		-- which font files the game can load (for fonts missing from the list)
+		for name, file in pairs(B.media.fonts) do
+			local probe = UIParent:CreateFontString(nil, "BACKGROUND")
+			local ok, result = pcall(probe.SetFont, probe, file, 12, "")
+			probe:SetText("Expressway 123")
+			B:Print(string.format("%s: loads=%s, result=%s, width=%.1f, path=%s", name, tostring(ok), tostring(result),
+				probe:GetStringWidth() or 0, tostring((probe:GetFont()))))
+		end
 	elseif cmd == "errors" or cmd == "error" then
 		Config:Show("errors")
 	elseif cmd == "install" then
