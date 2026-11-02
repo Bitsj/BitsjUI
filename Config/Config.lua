@@ -1517,7 +1517,12 @@ SlashCmdList.BITSJUI = function(msg)
 		B:GetModule("Nameplates"):ShowDebug()
 	elseif cmd == "fonts" then
 		-- which font files the game can load (for fonts missing from the list)
-		for name, file in pairs(B.media.fonts) do
+		local list = {}
+		for name, file in pairs(B.media.fonts) do list[name] = file end
+		-- test copies: a font that works, written into the Extra folder
+		list["TEST copy of Outfit"] = B.mediaPath .. "Fonts\\Extra\\TestOutfit.ttf"
+		list["TEST copy of Outfit (Fonts folder)"] = B.mediaPath .. "Fonts\\TestOutfit.ttf"
+		for name, file in pairs(list) do
 			local probe = UIParent:CreateFontString(nil, "BACKGROUND")
 			local ok, result = pcall(probe.SetFont, probe, file, 12, "")
 			if ok and result ~= false then probe:SetText("Expressway 123") end

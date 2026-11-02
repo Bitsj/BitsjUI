@@ -312,7 +312,9 @@ local function CreateList()
 			local opt = self.options[i + self.offset]
 			if opt then
 				b.text:SetText(opt.label)
-				if opt.font then b.text:SetFont(opt.font, 13, B:Flags("")) else W.Font(b.text, 13) end
+				-- preview each font in itself; one still loading shows in the menu font
+				W.Font(b.text, 13)
+				if opt.font and B.FontWorks(opt.font) then pcall(b.text.SetFont, b.text, opt.font, 13, B:Flags("")) end
 				local selected = opt.value == self.current
 				if selected then b.text:SetTextColor(Accent()) else b.text:SetTextColor(C.text[1], C.text[2], C.text[3]) end
 				b.value = opt.value

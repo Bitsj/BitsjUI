@@ -81,7 +81,7 @@ function B:RegisterSharedMedia()
 	-- LSM rejects (and errors on) font files that don't exist, e.g. Expressway
 	-- before the user has added it, so only hand over fonts that really load
 	for name, file in pairs(self.media.fonts) do
-		if not name:find("Custom") and B.FontWorks(file) then
+		if not name:find("Custom") and B.FontExists(file) then
 			pcall(LSM.Register, LSM, "font", "Bitsj " .. name, file)
 		end
 	end
@@ -93,7 +93,7 @@ end
 function B:GetFontList()
 	local list, seen = {}, {}
 	for name, file in pairs(self.media.fonts) do
-		if not self.media.extraFonts[name] or B.FontWorks(file) then list[#list + 1] = name end
+		if not self.media.extraFonts[name] or B.FontExists(file) then list[#list + 1] = name end
 		seen[name] = true
 	end
 	local LSM = GetLSM()
@@ -121,43 +121,74 @@ end
 
 -- font probing: a missing Custom.ttf must never leave text invisible
 local probe
-local fontOK = {}
-function B.FontWorks(file)
-	if fontOK[file] ~= nil then return fontOK[file] end
+-- Font state: "ok" (loaded), "pending" (the file is there but the game is
+-- still loading it; right after login every addon font starts out like this)
+-- or "missing" (no such file: SetFont errors with "file not found").
+local fontState = {}
+local pending = {}
+function B.FontState(file)
+	if fontState[file] == "ok" or fontState[file] == "missing" then return fontState[file] end
 	probe = probe or UIParent:CreateFontString(nil, "BACKGROUND")
 	probe:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
-	local ok, result = pcall(probe.SetFont, probe, file, 12, "")
-	local current = probe:GetFont()
-	-- SetFont returns false on a missing file in modern clients
-	ok = ok and result ~= false and current ~= nil and current:lower():gsub("/", "\\") == file:lower()
-	-- modern clients say "true" when the file loaded. Only clients that say
-	-- nothing get the width test: a font file the game sees for the first
-	-- time can measure 0 wide until it has finished loading.
-	if ok and result ~= true then
-		probe:SetText("Expressway 123")
-		local w = probe:GetStringWidth()
-		ok = (w or 0) > 1
+	local okCall, result = pcall(probe.SetFont, probe, file, 12, "")
+	local state
+	if not okCall then
+		state = "missing"
+	elseif result == false then
+		state = "pending"
+	else
+		local current = probe:GetFont()
+		state = (current and current:lower():gsub("/", "\\") == file:lower()) and "ok" or "pending"
+		-- old clients return nothing: make sure the font really draws
+		if state == "ok" and result ~= true then
+			probe:SetText("Expressway 123")
+			if (probe:GetStringWidth() or 0) <= 1 then state = "pending" end
+		end
 	end
-	-- only remember a yes; a no is checked again next time
-	if ok then fontOK[file] = true else B:RetryFonts() end
-	return ok
+	fontState[file] = state
+	if state == "pending" then pending[file] = true; B:RetryFonts() else pending[file] = nil end
+	return state
 end
 
--- Right after the game starts, addon fonts load in the background and can
--- report "not loaded" for a few seconds. Look again shortly and re-apply.
-local retries = 0
+-- true when the font can be used right now
+function B.FontWorks(file)
+	return B.FontState(file) == "ok"
+end
+
+-- true when the font file exists (loaded or still loading)
+function B.FontExists(file)
+	return B.FontState(file) ~= "missing"
+end
+
+-- Fonts still loading: look again every second and re-apply all text once
+-- one of them is ready.
+local tries = 0
 function B:RetryFonts()
-	if self.fontRetryQueued or retries >= 6 or not C_Timer then return end
+	if self.fontRetryQueued or not C_Timer then return end
+	if tries >= 30 then
+		-- never loaded: treat as missing (old clients don't report missing files)
+		for file in pairs(pending) do fontState[file] = "missing"; pending[file] = nil end
+		return
+	end
 	self.fontRetryQueued = true
-	retries = retries + 1
-	C_Timer.After(2, function()
+	tries = tries + 1
+	C_Timer.After(1, function()
 		B.fontRetryQueued = false
-		if not B.db then return end
-		local file = B.media.fonts[B.db.general.font]
-		if file and fontOK[file] == nil and not B.FontWorks(file) then return end
-		B:Try(B.RefreshFonts, B)
-		B:Try(B.UpdateAll, B)
+		local changed = false
+		for file in pairs(pending) do
+			fontState[file] = nil
+			if B.FontState(file) == "ok" then changed = true end
+		end
+		if changed and B.db then
+			B:Try(B.RefreshFonts, B)
+			B:Try(B.UpdateAll, B)
+		end
 	end)
+end
+
+-- start loading every font as early as possible (right when BitsjUI loads)
+function B:PreloadFonts()
+	for _, file in pairs(self.media.fonts) do pcall(B.FontState, file) end
 end
 
 -- Font sections: each part of the UI can use its own font, or "" for the

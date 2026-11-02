@@ -146,7 +146,9 @@ end
 -------------------------------------------------------------------------------
 function M:OnInitialize()
 	-- Expressway only works where the font file has been added by hand
+	-- start loading every font now, so they are ready by the time text is drawn
 	-- (extra fonts that are missing simply fall back to Inter in B:GetFont)
+	B:PreloadFonts()
 	-- 1.6.1: cleaner spell timers (saved profiles hold full copies of the old values)
 	if not B.db.migrated161 then
 		local t = B.db.timers
