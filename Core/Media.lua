@@ -18,9 +18,6 @@ B.media = {
 		["Arial Narrow"] = "Fonts\\ARIALN.TTF",
 		["Morpheus"] = "Fonts\\MORPHEUS.TTF",
 		["Skurri"] = "Fonts\\SKURRI.TTF",
-		-- Expressway is a paid font (Typodermic) and is never shipped with BitsjUI;
-		-- it shows up in the list only when Media\Fonts\Expressway.ttf exists locally
-		["Expressway"] = path .. "Fonts\\Expressway.ttf",
 		-- drop your own font into Media\Fonts\Custom.ttf and pick this
 		["Custom (Custom.ttf)"] = path .. "Fonts\\Custom.ttf",
 	},
@@ -34,6 +31,37 @@ B.media = {
 		["Blizzard Raid"] = "Interface\\RaidFrame\\Raid-Bar-Hp-Fill",
 	},
 }
+
+-- Extra fonts that can be added by hand to Media\Fonts\Extra\ (taken from
+-- other UI packs or bought). Several are paid fonts, so they are never shipped
+-- with BitsjUI; each one only shows up in the font list when its file exists.
+B.media.extraFonts = {
+	["Expressway"] = "Expressway.ttf",
+	["Expressway Bold"] = "Expressway Bold.ttf",
+	["Expressway CAPS"] = "Expressway CAPS.ttf",
+	["Avant Garde"] = "Avant Garde Naowh.ttf",
+	["Arial Bold"] = "Arial Bold.ttf",
+	["Poppins"] = "Poppins.ttf",
+	["Fira Sans Light"] = "FiraSans Light.ttf",
+	["Fira Sans Medium"] = "FiraSans Medium.ttf",
+	["Fira Sans Bold"] = "FiraSans Bold.ttf",
+	["Barlow Condensed"] = "Barlow Condensed.ttf",
+	["Changa"] = "Changa.ttf",
+	["Cinzel Decorative"] = "Cinzel Decorative.ttf",
+	["Exo"] = "Exo.otf",
+	["Future X Black"] = "Future X Black.otf",
+	["Gotham Narrow"] = "Gotham Narrow.otf",
+	["Gotham Narrow Ultra"] = "Gotham Narrow Ultra.otf",
+	["Russo One"] = "Russo One.ttf",
+	["Ubuntu"] = "Ubuntu.ttf",
+	["Homespun"] = "Homespun.ttf",
+	["HWT Artz"] = "HWT Artz.ttf",
+	["KMT Kimberley"] = "KMT Kimberley.otf",
+	["KMT Ninja Naruto"] = "KMT Ninja Naruto.ttf",
+}
+for name, file in pairs(B.media.extraFonts) do
+	B.media.fonts[name] = path .. "Fonts\\Extra\\" .. file
+end
 
 B.outlines = {
 	{ value = "NONE", label = "None" },
@@ -65,7 +93,7 @@ end
 function B:GetFontList()
 	local list, seen = {}, {}
 	for name, file in pairs(self.media.fonts) do
-		if name ~= "Expressway" or B.FontWorks(file) then list[#list + 1] = name end
+		if not self.media.extraFonts[name] or B.FontWorks(file) then list[#list + 1] = name end
 		seen[name] = true
 	end
 	local LSM = GetLSM()

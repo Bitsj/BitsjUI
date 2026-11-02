@@ -5,6 +5,7 @@ ignore:
   - .github
   - .gitignore
   - Media/Fonts/Expressway.ttf
+  - Media/Fonts/Extra
   - Media/Fonts/Custom.ttf
 
 manual-changelog:

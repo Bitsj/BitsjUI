@@ -146,7 +146,7 @@ end
 -------------------------------------------------------------------------------
 function M:OnInitialize()
 	-- Expressway only works where the font file has been added by hand
-	if B.db.general.font == "Expressway" and not B.FontWorks(B.media.fonts.Expressway) then B.db.general.font = "Barlow" end
+	-- (extra fonts that are missing simply fall back to Inter in B:GetFont)
 	-- 1.6.1: cleaner spell timers (saved profiles hold full copies of the old values)
 	if not B.db.migrated161 then
 		local t = B.db.timers
