@@ -111,8 +111,25 @@ function B.FontWorks(file)
 		ok = (w or 0) > 1
 	end
 	-- only remember a yes; a no is checked again next time
-	if ok then fontOK[file] = true end
+	if ok then fontOK[file] = true else B:RetryFonts() end
 	return ok
+end
+
+-- Right after the game starts, addon fonts load in the background and can
+-- report "not loaded" for a few seconds. Look again shortly and re-apply.
+local retries = 0
+function B:RetryFonts()
+	if self.fontRetryQueued or retries >= 6 or not C_Timer then return end
+	self.fontRetryQueued = true
+	retries = retries + 1
+	C_Timer.After(2, function()
+		B.fontRetryQueued = false
+		if not B.db then return end
+		local file = B.media.fonts[B.db.general.font]
+		if file and fontOK[file] == nil and not B.FontWorks(file) then return end
+		B:Try(B.RefreshFonts, B)
+		B:Try(B.UpdateAll, B)
+	end)
 end
 
 -- Font sections: each part of the UI can use its own font, or "" for the
