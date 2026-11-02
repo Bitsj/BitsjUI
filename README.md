@@ -38,7 +38,7 @@ You can also click the BitsjUI button by the minimap (right-click = move mode) o
 | Nameplates | Blizzard's plates restyled: flat texture, 1 px border, health percent, cast colors. |
 | Minimap | Square, 1 px border, scroll-wheel zoom, zone name on hover, coordinates. |
 | Chat, tooltip | Font, no button clutter, dark tooltips with a class-colored border. |
-| Fonts | Barlow Semi Condensed (default), Inter, Outfit, Instrument Sans, Big Shoulders + Blizzard fonts. Can replace the font in the whole game. |
+| Fonts | Barlow Semi Condensed (default), Inter, Outfit, Instrument Sans, Big Shoulders, Poppins, Fira Sans (Light, Medium, Bold), Barlow Condensed, Changa, Cinzel Decorative, Exo, Russo One, Ubuntu + Blizzard fonts. One overall font plus an optional font per part of the UI (/bui > General). Can replace the font in the whole game. |
 
 ## Button feel
 Every press (key or mouse) gives a short flash and a small "click" in the icon. Holding the key keeps the button darker. Blizzard's own cast animations on the buttons are hidden by default, because they look cluttered on smaller buttons. Settings: *Action bars → Button feel*.

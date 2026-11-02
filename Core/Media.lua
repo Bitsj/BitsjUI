@@ -18,6 +18,17 @@ B.media = {
 		["Arial Narrow"] = "Fonts\\ARIALN.TTF",
 		["Morpheus"] = "Fonts\\MORPHEUS.TTF",
 		["Skurri"] = "Fonts\\SKURRI.TTF",
+		-- free fonts (SIL Open Font License / Ubuntu Font Licence, see Media\Fonts)
+		["Poppins"] = path .. "Fonts\\Poppins.ttf",
+		["Fira Sans Light"] = path .. "Fonts\\FiraSans-Light.ttf",
+		["Fira Sans Medium"] = path .. "Fonts\\FiraSans-Medium.ttf",
+		["Fira Sans Bold"] = path .. "Fonts\\FiraSans-Bold.ttf",
+		["Barlow Condensed"] = path .. "Fonts\\BarlowCondensed.ttf",
+		["Changa"] = path .. "Fonts\\Changa.ttf",
+		["Cinzel Decorative"] = path .. "Fonts\\CinzelDecorative.ttf",
+		["Exo"] = path .. "Fonts\\Exo.otf",
+		["Russo One"] = path .. "Fonts\\RussoOne.ttf",
+		["Ubuntu"] = path .. "Fonts\\Ubuntu.ttf",
 		-- drop your own font into Media\Fonts\Custom.ttf and pick this
 		["Custom (Custom.ttf)"] = path .. "Fonts\\Custom.ttf",
 	},
@@ -32,7 +43,7 @@ B.media = {
 	},
 }
 
--- Extra fonts that can be added by hand to Media\Fonts\Extra\ (taken from
+-- Paid / restricted fonts that can be added by hand to Media\Fonts\Extra\ (taken from
 -- other UI packs or bought). Several are paid fonts, so they are never shipped
 -- with BitsjUI; each one only shows up in the font list when its file exists.
 B.media.extraFonts = {
@@ -41,19 +52,9 @@ B.media.extraFonts = {
 	["Expressway CAPS"] = "Expressway CAPS.ttf",
 	["Avant Garde"] = "Avant Garde Naowh.ttf",
 	["Arial Bold"] = "Arial Bold.ttf",
-	["Poppins"] = "Poppins.ttf",
-	["Fira Sans Light"] = "FiraSans Light.ttf",
-	["Fira Sans Medium"] = "FiraSans Medium.ttf",
-	["Fira Sans Bold"] = "FiraSans Bold.ttf",
-	["Barlow Condensed"] = "Barlow Condensed.ttf",
-	["Changa"] = "Changa.ttf",
-	["Cinzel Decorative"] = "Cinzel Decorative.ttf",
-	["Exo"] = "Exo.otf",
 	["Future X Black"] = "Future X Black.otf",
 	["Gotham Narrow"] = "Gotham Narrow.otf",
 	["Gotham Narrow Ultra"] = "Gotham Narrow Ultra.otf",
-	["Russo One"] = "Russo One.ttf",
-	["Ubuntu"] = "Ubuntu.ttf",
 	["Homespun"] = "Homespun.ttf",
 	["HWT Artz"] = "HWT Artz.ttf",
 	["KMT Kimberley"] = "KMT Kimberley.otf",
