@@ -24,6 +24,10 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
+	{ "1.3.1", {
+		"Nameplates: switches for friendly player and friendly NPC nameplates (/bui > Nameplates).",
+		"Nameplates: neutral mobs have their own colour now (no longer the same yellow as rogues), and you can change it under Mob colours.",
+	} },
 	{ "1.3.0", {
 		"Party tracking with MiniAuras (formerly MiniCC): crowd control, defensives and the interrupt tracker fit BitsjUI's party frames. MiniAuras is optional and needed only for this tracking; set it up in the installer or /bui > Party & raid.",
 		"Nameplates: your interrupt next to enemy castbars. Green frame when it's ready, grey with a countdown when not, and a line on the castbar where it comes back.",

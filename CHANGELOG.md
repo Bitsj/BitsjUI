@@ -1,3 +1,9 @@
+# BitsjUI 1.3.1
+
+## New
+- Nameplates: switches for friendly player and friendly NPC nameplates (/bui > Nameplates).
+- Nameplates: neutral mobs have their own colour (no longer the same yellow as rogues). Change it under /bui > Nameplates > Mob colours.
+
 # BitsjUI 1.3.0
 
 ## New
