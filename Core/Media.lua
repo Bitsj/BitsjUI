@@ -18,6 +18,9 @@ B.media = {
 		["Arial Narrow"] = "Fonts\\ARIALN.TTF",
 		["Morpheus"] = "Fonts\\MORPHEUS.TTF",
 		["Skurri"] = "Fonts\\SKURRI.TTF",
+		-- Expressway is a paid font (Typodermic) and is never shipped with BitsjUI;
+		-- it shows up in the list only when Media\Fonts\Expressway.ttf exists locally
+		["Expressway"] = path .. "Fonts\\Expressway.ttf",
 		-- drop your own font into Media\Fonts\Custom.ttf and pick this
 		["Custom (Custom.ttf)"] = path .. "Fonts\\Custom.ttf",
 	},
@@ -61,7 +64,10 @@ end
 
 function B:GetFontList()
 	local list, seen = {}, {}
-	for name in pairs(self.media.fonts) do list[#list + 1] = name; seen[name] = true end
+	for name, file in pairs(self.media.fonts) do
+		if name ~= "Expressway" or B.FontWorks(file) then list[#list + 1] = name end
+		seen[name] = true
+	end
 	local LSM = GetLSM()
 	if LSM then
 		for _, name in ipairs(LSM:List("font")) do
@@ -106,8 +112,31 @@ function B.FontWorks(file)
 	return ok
 end
 
-function B:GetFont(name)
-	name = name or self.db.general.font
+-- Font sections: each part of the UI can use its own font, or "" for the
+-- overall font (/bui > General > Fonts)
+B.FONT_SECTIONS = {
+	{ key = "unitframes", label = "Unit frames" },
+	{ key = "raidframes", label = "Party & raid" },
+	{ key = "nameplates", label = "Nameplates" },
+	{ key = "castbars", label = "Castbars & swing timer" },
+	{ key = "actionbars", label = "Action bars & cooldowns" },
+	{ key = "auras", label = "Buffs, timers & defensives" },
+	{ key = "meter", label = "Damage meter" },
+	{ key = "chat", label = "Chat" },
+	{ key = "minimap", label = "Minimap & info texts" },
+	{ key = "quests", label = "Quest tracker" },
+	{ key = "windows", label = "Bags, character & friends" },
+}
+
+-- the font name a section uses (its own, or the overall one)
+function B:FontName(section)
+	local own = section and self.db.fonts and self.db.fonts[section]
+	if type(own) == "string" and own ~= "" then return own end
+	return self.db.general.font
+end
+
+function B:GetFont(name, section)
+	name = name or self:FontName(section)
 	local file = self.media.fonts[name]
 	if not file then
 		local LSM = GetLSM()
@@ -158,9 +187,10 @@ function B:GetOutline()
 end
 
 -- apply BitsjUI font to a fontstring
-function B:SetFont(fs, size, outline)
+function B:SetFont(fs, size, outline, section)
 	if not fs or not fs.SetFont then return end
-	fs:SetFont(self:GetFont(), size or 12, outline and self:Flags(outline) or self:GetOutline())
+	if section then fs.bFontSection = section end
+	fs:SetFont(self:GetFont(nil, fs.bFontSection), size or 12, outline and self:Flags(outline) or self:GetOutline())
 	if self.db.general.fontShadow then
 		fs:SetShadowColor(0, 0, 0, 1)
 		fs:SetShadowOffset(1, -1)
@@ -169,9 +199,9 @@ function B:SetFont(fs, size, outline)
 	end
 end
 
-function B:CreateText(parent, size, justify, layer)
+function B:CreateText(parent, size, justify, layer, section)
 	local fs = parent:CreateFontString(nil, layer or "OVERLAY")
-	self:SetFont(fs, size)
+	self:SetFont(fs, size, nil, section)
 	fs:SetJustifyH(justify or "CENTER")
 	fs:SetWordWrap(false)
 	self.fontStrings = self.fontStrings or setmetatable({}, { __mode = "k" })

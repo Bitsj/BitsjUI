@@ -10,6 +10,12 @@
 local _, B = ...
 local M = B:NewModule("Bags")
 
+-- fonts: this file uses the "windows" section font (/bui > General > Fonts)
+local FONT_SECTION = "windows"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.bags end
 
 local FRAMES = { "ContainerFrameCombinedBags", "ContainerFrame1", "ContainerFrame2", "ContainerFrame3",
@@ -56,7 +62,7 @@ local function SkinButton(btn)
 	local pushed = btn:GetPushedTexture()
 	if pushed then pushed:SetColorTexture(0, 0, 0, 0.35); pushed:SetAllPoints(btn) end
 	if btn.Count then
-		B:SetFont(btn.Count, db().countSize, "OUTLINE")
+		SetFont(btn.Count, db().countSize, "OUTLINE")
 		btn.Count:ClearAllPoints()
 		btn.Count:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -2, 2)
 	end
@@ -110,14 +116,14 @@ local function SkinFrame(frame)
 	frame.bPanel = panel
 	-- title + money in the UI font
 	local title = frame.TitleContainer and frame.TitleContainer.TitleText
-	if title then B:SetFont(title, 13); title:SetTextColor(B:AccentColor()) end
+	if title then SetFont(title, 13); title:SetTextColor(B:AccentColor()) end
 	if frame.MoneyFrame then
 		for _, region in ipairs({ frame.MoneyFrame:GetRegions() }) do
-			if region.SetFont then B:SetFont(region, 12) end
+			if region.SetFont then SetFont(region, 12) end
 		end
 		for _, child in ipairs({ frame.MoneyFrame:GetChildren() }) do
 			local t = child.Text or (child.GetFontString and child:GetFontString())
-			if t then B:SetFont(t, 12) end
+			if t then SetFont(t, 12) end
 		end
 	end
 	hooksecurefunc(frame, "UpdateItems", function(self) UpdateFrame(self) end)
@@ -136,7 +142,7 @@ local function SkinSearch()
 	bg:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", 0, 1)
 	bg:SetFrameLevel(math.max(0, box:GetFrameLevel() - 1))
 	B:CreateBackdrop(bg, 0.9)
-	box:SetFont(B:GetFont(), 12, B:Flags(""))
+	box:SetFont(GetFont(), 12, B:Flags(""))
 end
 
 -------------------------------------------------------------------------------
@@ -189,17 +195,17 @@ local function SkinClassic(frame)
 	frame.bIcon = icon
 	local title = _G[name .. "Name"]
 	if title then
-		B:SetFont(title, 13)
+		SetFont(title, 13)
 		title:SetTextColor(B:AccentColor())
 	end
 	local money = _G[name .. "MoneyFrame"]
 	if money then
 		for _, region in ipairs({ money:GetRegions() }) do
-			if region.SetFont then B:SetFont(region, 12) end
+			if region.SetFont then SetFont(region, 12) end
 		end
 		for _, child in ipairs({ money:GetChildren() }) do
 			local t = child.Text or (child.GetFontString and child:GetFontString())
-			if t then B:SetFont(t, 12) end
+			if t then SetFont(t, 12) end
 		end
 	end
 	frame:HookScript("OnShow", function(self)
@@ -259,7 +265,7 @@ function M:Update()
 				local name = f:GetName()
 				for i = 1, (f.size or 0) do
 					local btn = _G[name .. "Item" .. i]
-					if btn and btn.Count and btn.bSkinned then B:SetFont(btn.Count, db().countSize, "OUTLINE") end
+					if btn and btn.Count and btn.bSkinned then SetFont(btn.Count, db().countSize, "OUTLINE") end
 				end
 			end
 		end
@@ -276,7 +282,7 @@ function M:Update()
 		local f = _G[name]
 		if f and f.EnumerateValidItems then
 			for _, btn in f:EnumerateValidItems() do
-				if btn and btn.Count and btn.bSkinned then B:SetFont(btn.Count, db().countSize, "OUTLINE") end
+				if btn and btn.Count and btn.bSkinned then SetFont(btn.Count, db().countSize, "OUTLINE") end
 			end
 		end
 	end

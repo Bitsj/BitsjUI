@@ -8,6 +8,12 @@
 local _, B = ...
 local M = B:NewModule("ClassPower")
 
+-- fonts: this file uses the "unitframes" section font (/bui > General > Fonts)
+local FONT_SECTION = "unitframes"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local issecret = B.IsSecret
 local PT = Enum and Enum.PowerType or {}
 

@@ -12,6 +12,12 @@
 local _, B = ...
 local M = B:NewModule("Quests")
 
+-- fonts: this file uses the "quests" section font (/bui > General > Fonts)
+local FONT_SECTION = "quests"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.quests end
 
 local TRACKERS = {
@@ -23,7 +29,7 @@ local TRACKERS = {
 -- the font objects the tracker draws with
 function M:ApplyFonts()
 	local d = db()
-	local font = B:GetFont()
+	local font = GetFont()
 	local function set(name, size)
 		local fo = _G[name]
 		if fo and fo.SetFont then
@@ -96,7 +102,7 @@ function M:StyleClassicWatch()
 		if not line then break end
 		local text = line:GetText()
 		local isObjective = type(text) == "string" and text:sub(1, 3) == " - "
-		B:SetFont(line, isObjective and d.lineSize or d.headerSize, d.outline and "OUTLINE" or "")
+		SetFont(line, isObjective and d.lineSize or d.headerSize, d.outline and "OUTLINE" or "")
 		line:SetShadowColor(0, 0, 0, 1)
 		line:SetShadowOffset(1, -1)
 		if not isObjective and text and text ~= "" then

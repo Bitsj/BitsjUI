@@ -12,6 +12,12 @@
 local _, B = ...
 local M = B:NewModule("Character")
 
+-- fonts: this file uses the "windows" section font (/bui > General > Fonts)
+local FONT_SECTION = "windows"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.character end
 
 -- slot name, inventory slot id, side the text goes on
@@ -166,11 +172,11 @@ local function SkinSlot(btn, side)
 	local just = side == "RIGHT" and "LEFT" or "RIGHT"
 	if side == "TOP" then just = "CENTER" end
 	btn.bSide = side
-	btn.bIlvl = B:CreateText(o, db().ilvlSize, just)
-	btn.bEnchant = B:CreateText(o, db().enchantSize, just)
+	btn.bIlvl = CreateText(o, db().ilvlSize, just)
+	btn.bEnchant = CreateText(o, db().enchantSize, just)
 	btn.bEnchant:SetWidth(104)
 	for _, fs in ipairs({ btn.bIlvl, btn.bEnchant }) do
-		B:SetFont(fs, fs == btn.bIlvl and db().ilvlSize or db().enchantSize, "OUTLINE")
+		SetFont(fs, fs == btn.bIlvl and db().ilvlSize or db().enchantSize, "OUTLINE")
 		fs:SetShadowColor(0, 0, 0, 1)
 		fs:SetShadowOffset(1, -1)
 	end
@@ -314,7 +320,7 @@ local function SkinCategory(cat)
 	line:SetPoint("BOTTOMLEFT", bg, "BOTTOMLEFT")
 	line:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT")
 	if cat.Title then
-		B:SetFont(cat.Title, 13, "OUTLINE")
+		SetFont(cat.Title, 13, "OUTLINE")
 		cat.Title:SetTextColor(B:AccentColor())
 	end
 end
@@ -322,10 +328,10 @@ end
 local function StatRow(parent)
 	local f = CreateFrame("Frame", nil, parent)
 	f:SetHeight(15)
-	f.Label = B:CreateText(f, 11, "LEFT")
+	f.Label = CreateText(f, 11, "LEFT")
 	f.Label:SetPoint("LEFT", 10, 0)
 	f.Label:SetTextColor(0.85, 0.75, 0.45)
-	f.Value = B:CreateText(f, 11, "RIGHT")
+	f.Value = CreateText(f, 11, "RIGHT")
 	f.Value:SetPoint("RIGHT", -10, 0)
 	return f
 end
@@ -339,7 +345,7 @@ function M:ExtraBlock()
 		e.cat = CreateFrame("Frame", nil, e)
 		e.cat:SetSize(190, 28)
 		e.cat:SetPoint("TOP")
-		e.cat.Title = B:CreateText(e.cat, 13, "CENTER")
+		e.cat.Title = CreateText(e.cat, 13, "CENTER")
 		e.cat.Title:SetPoint("CENTER")
 		e.cat.Title:SetText("More")
 		SkinCategory(e.cat)
@@ -475,7 +481,7 @@ function M:UpdateStats()
 		B.HideRegion(ilf.Background)
 		local overall, equipped = AverageItemLevel()
 		if equipped then
-			B:SetFont(ilf.Value, 17, "OUTLINE")
+			SetFont(ilf.Value, 17, "OUTLINE")
 			local r, g, b = ilf.Value:GetTextColor()
 			ilf.Value:SetFormattedText("%s%.2f|r  |cff8a8a90/ %.2f|r", Hex(r, g, b), equipped, overall or equipped)
 		end
@@ -483,8 +489,8 @@ function M:UpdateStats()
 	if pane.statsFramePool then
 		for frame in pane.statsFramePool:EnumerateActive() do
 			if frame.Label and frame.Value then
-				B:SetFont(frame.Label, 11)
-				B:SetFont(frame.Value, 11)
+				SetFont(frame.Label, 11)
+				SetFont(frame.Value, 11)
 				frame.Label:SetTextColor(0.85, 0.75, 0.45)
 				if frame.Background then frame.Background:SetAtlas(nil); frame.Background:SetColorTexture(1, 1, 1, 0.04) end
 				local label = frame.Label:GetText()
@@ -565,7 +571,7 @@ function M:ClassicStats()
 		p.cat:SetHeight(24)
 		p.cat:SetPoint("TOPLEFT", 4, -4)
 		p.cat:SetPoint("TOPRIGHT", -4, -4)
-		p.cat.Title = B:CreateText(p.cat, 13, "CENTER")
+		p.cat.Title = CreateText(p.cat, 13, "CENTER")
 		p.cat.Title:SetPoint("CENTER")
 		p.cat.Title:SetText("More")
 		SkinCategory(p.cat)
@@ -617,16 +623,16 @@ function M:ClassicStatFonts()
 		"CharacterRangedAttackFrame", "CharacterRangedAttackPowerFrame", "CharacterRangedDamageFrame" }
 	for _, n in ipairs(names) do
 		local label, value = _G[n .. "Label"], _G[n .. "StatText"]
-		if label then B:SetFont(label, 11); label:SetTextColor(0.85, 0.75, 0.45) end
-		if value then B:SetFont(value, 11) end
+		if label then SetFont(label, 11); label:SetTextColor(0.85, 0.75, 0.45) end
+		if value then SetFont(value, 11) end
 	end
 	for i = 1, 5 do
 		local t = _G["MagicResText" .. i]
-		if t then B:SetFont(t, 11, "OUTLINE") end
+		if t then SetFont(t, 11, "OUTLINE") end
 	end
 	for _, n in ipairs({ "CharacterNameText", "CharacterLevelText", "CharacterGuildText" }) do
 		local t = _G[n]
-		if t then B:SetFont(t, n == "CharacterNameText" and 14 or 11) end
+		if t then SetFont(t, n == "CharacterNameText" and 14 or 11) end
 	end
 	if _G.CharacterNameText then _G.CharacterNameText:SetTextColor(B:AccentColor()) end
 end
@@ -650,7 +656,7 @@ function M:SkinClassic()
 	local o = CreateFrame("Frame", nil, cf)
 	o:SetAllPoints(cf)
 	o:SetFrameLevel(cf:GetFrameLevel() + 20)
-	self.avg = B:CreateText(o, 12, "LEFT")
+	self.avg = CreateText(o, 12, "LEFT")
 	self.avg:SetPoint("TOPLEFT", cf, "TOPLEFT", 20, -20)
 	if PaperDollFrame then
 		PaperDollFrame:HookScript("OnShow", function() B:Try(M.ClassicStatFonts, M); B:Try(M.ClassicStats, M) end)
@@ -682,7 +688,7 @@ function M:Skin()
 	local o = CreateFrame("Frame", nil, cf)
 	o:SetAllPoints(cf)
 	o:SetFrameLevel(cf:GetFrameLevel() + 20)
-	self.avg = B:CreateText(o, 12, "RIGHT")
+	self.avg = CreateText(o, 12, "RIGHT")
 	self.avg:SetPoint("TOPRIGHT", cf, "TOPRIGHT", -30, -5)
 end
 
@@ -712,8 +718,8 @@ function M:Update()
 	for _, s in ipairs(SLOTS) do
 		local btn = _G[s[1]]
 		if btn and btn.bIlvl then
-			B:SetFont(btn.bIlvl, db().ilvlSize, "OUTLINE")
-			B:SetFont(btn.bEnchant, db().enchantSize, "OUTLINE")
+			SetFont(btn.bIlvl, db().ilvlSize, "OUTLINE")
+			SetFont(btn.bEnchant, db().enchantSize, "OUTLINE")
 		end
 	end
 	self:UpdateAll()

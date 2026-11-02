@@ -12,6 +12,12 @@
 local _, B = ...
 local M = B:NewModule("QoL")
 
+-- fonts: this file uses the "minimap" section font (/bui > General > Fonts)
+local FONT_SECTION = "minimap"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.qol end
 
 local function Money(c)
@@ -224,14 +230,14 @@ local function UpdatePerf()
 	local d = db()
 	if not perf then return end
 	perf:SetShown(d.fpsText)
-	perf.text:SetFont(B:GetFont(), d.fpsSize, B:GetOutline())
+	perf.text:SetFont(GetFont(), d.fpsSize, B:GetOutline())
 end
 
 local function CreatePerf()
 	perf = CreateFrame("Frame", "BitsjUIPerformance", UIParent)
 	perf:SetSize(120, 16)
 	perf.text = perf:CreateFontString(nil, "OVERLAY")
-	perf.text:SetFont(B:GetFont(), db().fpsSize, B:GetOutline())
+	perf.text:SetFont(GetFont(), db().fpsSize, B:GetOutline())
 	perf.text:SetShadowOffset(1, -1)
 	perf.text:SetPoint("CENTER")
 	B:RegisterMover(perf, "perf", "FPS / latency", { "TOPRIGHT", "TOPRIGHT", -60, -222 })
@@ -277,7 +283,7 @@ local function CreateDurability()
 	dura = CreateFrame("Frame", "BitsjUIDurability", UIParent)
 	dura:SetSize(260, 24)
 	dura.text = dura:CreateFontString(nil, "OVERLAY")
-	dura.text:SetFont(B:GetFont(), 18, B:Flags("OUTLINE"))
+	dura.text:SetFont(GetFont(), 18, B:Flags("OUTLINE"))
 	dura.text:SetTextColor(1, 0.35, 0.3)
 	dura.text:SetPoint("CENTER")
 	B:RegisterMover(dura, "durability", "Durability warning", { "TOP", "TOP", 0, -180 })

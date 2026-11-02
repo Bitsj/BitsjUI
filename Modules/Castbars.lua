@@ -7,6 +7,12 @@
 ]]
 local _, B = ...
 local M = B:NewModule("Castbars")
+
+-- fonts: this file uses the "castbars" section font (/bui > General > Fonts)
+local FONT_SECTION = "castbars"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
 M.bars = {}
 
 local issecret = B.IsSecret
@@ -251,9 +257,9 @@ local function CreateCastbar(def)
 	bar.icon:SetAllPoints()
 	B:SkinIcon(bar.icon)
 
-	bar.text = B:CreateText(bar, B.db.castbars.fontSize, "LEFT")
+	bar.text = CreateText(bar, B.db.castbars.fontSize, "LEFT")
 	bar.text:SetPoint("LEFT", bar, "LEFT", 6, 0)
-	bar.timer = B:CreateText(bar, B.db.castbars.fontSize, "RIGHT")
+	bar.timer = CreateText(bar, B.db.castbars.fontSize, "RIGHT")
 	bar.timer:SetPoint("RIGHT", bar, "RIGHT", -6, 0)
 	bar.text:SetPoint("RIGHT", bar.timer, "LEFT", -6, 0)
 
@@ -302,8 +308,8 @@ function M:LayoutBar(key)
 	bar.spark:SetSize(2, c.height)
 	local size = B.db.castbars.fontSize
 	if c.height < 18 then size = size - 2 end
-	B:SetFont(bar.text, size); bar.text.bSize = size
-	B:SetFont(bar.timer, size); bar.timer.bSize = size
+	SetFont(bar.text, size); bar.text.bSize = size
+	SetFont(bar.timer, size); bar.timer.bSize = size
 	if not c.enabled then
 		bar:UnregisterAllEvents()
 		bar:Hide()

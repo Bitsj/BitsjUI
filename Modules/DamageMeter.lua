@@ -8,6 +8,12 @@
 ]]
 local _, B = ...
 local M = B:NewModule("DamageMeter")
+
+-- fonts: this file uses the "meter" section font (/bui > General > Fonts)
+local FONT_SECTION = "meter"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
 M.windows = {}
 local bd   -- breakdown window (created on first use)
 
@@ -177,7 +183,7 @@ local function StyleRow(win, row, i)
 	row:ClearAllPoints()
 	row:SetPoint("TOPLEFT", win.content, "TOPLEFT", 0, -(i - 1) * (c.barHeight + c.barSpacing))
 	row:SetPoint("TOPRIGHT", win.content, "TOPRIGHT", 0, -(i - 1) * (c.barHeight + c.barSpacing))
-	local font = B:GetFont()
+	local font = GetFont()
 	row.left:SetFont(font, c.fontSize, B:GetOutline())
 	row.right:SetFont(font, c.fontSize, B:GetOutline())
 	row.icon:SetSize(c.barHeight, c.barHeight)
@@ -331,9 +337,9 @@ function M:Layout(win)
 	win.content:ClearAllPoints()
 	win.content:SetPoint("TOPLEFT", win, "TOPLEFT", 2, -(titleH + 2))
 	win.content:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -2, 2)
-	win.title:SetFont(B:GetFont(), 12, B:Flags(""))
-	for _, b in ipairs(win.buttons) do b.text:SetFont(B:GetFont(), 12, B:Flags("")) end
-	win.notice:SetFont(B:GetFont(), 12, B:Flags(""))
+	win.title:SetFont(GetFont(), 12, B:Flags(""))
+	for _, b in ipairs(win.buttons) do b.text:SetFont(GetFont(), 12, B:Flags("")) end
+	win.notice:SetFont(GetFont(), 12, B:Flags(""))
 	B:SetMoverEnabled("meter" .. win.id, c.enabled)
 	B.Movers:Apply("meter" .. win.id)
 	self:ApplyVisibility(win)
@@ -344,7 +350,7 @@ local function TitleButton(win, text, tooltip, onClick)
 	local b = CreateFrame("Button", nil, win.titleBar)
 	b:SetSize(20, 20)
 	b.text = b:CreateFontString(nil, "OVERLAY")
-	b.text:SetFont(B:GetFont(), 12, B:Flags(""))
+	b.text:SetFont(GetFont(), 12, B:Flags(""))
 	b.text:SetPoint("CENTER")
 	b.text:SetText(text)
 	b.text:SetTextColor(0.7, 0.72, 0.75)
@@ -592,7 +598,7 @@ local function BDRow(i)
 	r.amount:SetJustifyH("RIGHT")
 	r.extra = r:CreateFontString(nil, "OVERLAY")
 	r.extra:SetJustifyH("RIGHT")
-	for _, fs in ipairs({ r.name, r.amount, r.extra }) do fs:SetFont(B:GetFont(), 12, B:Flags("")) end
+	for _, fs in ipairs({ r.name, r.amount, r.extra }) do fs:SetFont(GetFont(), 12, B:Flags("")) end
 	r:SetScript("OnEnter", function(self)
 		if not self.spellID then return end
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -636,11 +642,11 @@ local function CreateBreakdown()
 	bd.icon = head:CreateTexture(nil, "OVERLAY")
 	bd.icon:SetSize(24, 24); bd.icon:SetPoint("LEFT", 6, 0)
 	bd.title = head:CreateFontString(nil, "OVERLAY")
-	bd.title:SetFont(B:GetFont(), 14, B:Flags(""))
+	bd.title:SetFont(GetFont(), 14, B:Flags(""))
 	bd.title:SetPoint("TOPLEFT", bd.icon, "TOPRIGHT", 6, 0)
 	bd.title:SetJustifyH("LEFT"); bd.title:SetWordWrap(false)
 	bd.sub = head:CreateFontString(nil, "OVERLAY")
-	bd.sub:SetFont(B:GetFont(), 11, B:Flags(""))
+	bd.sub:SetFont(GetFont(), 11, B:Flags(""))
 	bd.sub:SetPoint("BOTTOMLEFT", bd.icon, "BOTTOMRIGHT", 6, 0)
 	bd.sub:SetJustifyH("LEFT"); bd.sub:SetTextColor(0.62, 0.64, 0.68)
 
@@ -648,7 +654,7 @@ local function CreateBreakdown()
 		local b = CreateFrame("Button", nil, head)
 		b:SetSize(20, 20)
 		b.text = b:CreateFontString(nil, "OVERLAY")
-		b.text:SetFont(B:GetFont(), 13, B:Flags(""))
+		b.text:SetFont(GetFont(), 13, B:Flags(""))
 		b.text:SetPoint("CENTER"); b.text:SetText(text); b.text:SetTextColor(0.7, 0.72, 0.75)
 		b:SetScript("OnClick", onClick)
 		b:SetScript("OnEnter", function(self)
@@ -670,10 +676,10 @@ local function CreateBreakdown()
 	bd.list:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 4, -4)
 	bd.list:SetPoint("BOTTOMRIGHT", bd, "BOTTOMRIGHT", -4, 18)
 	bd.notice = bd.list:CreateFontString(nil, "OVERLAY")
-	bd.notice:SetFont(B:GetFont(), 12, B:Flags(""))
+	bd.notice:SetFont(GetFont(), 12, B:Flags(""))
 	bd.notice:SetPoint("CENTER"); bd.notice:SetTextColor(0.6, 0.62, 0.66)
 	bd.foot = bd:CreateFontString(nil, "OVERLAY")
-	bd.foot:SetFont(B:GetFont(), 10, B:Flags(""))
+	bd.foot:SetFont(GetFont(), 10, B:Flags(""))
 	bd.foot:SetPoint("BOTTOMLEFT", 6, 4); bd.foot:SetTextColor(0.5, 0.52, 0.56)
 
 	bd:SetScript("OnMouseWheel", function(self, delta)
@@ -716,7 +722,7 @@ end
 function M:RefreshBreakdown()
 	if not bd or not bd:IsShown() or not bd.win then return end
 	local c = cfg(bd.win.id)
-	local font, outline = B:GetFont(), B:GetOutline()
+	local font, outline = GetFont(), B:GetOutline()
 	bd.title:SetFont(font, 14, outline)
 	bd.sub:SetFont(font, 11, B:Flags(""))
 	bd.foot:SetFont(font, 10, B:Flags(""))

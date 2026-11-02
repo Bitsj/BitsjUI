@@ -4,6 +4,8 @@ ignore:
   - README.md
   - .github
   - .gitignore
+  - Media/Fonts/Expressway.ttf
+  - Media/Fonts/Custom.ttf
 
 manual-changelog:
   filename: CHANGELOG.md

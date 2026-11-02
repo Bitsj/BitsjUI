@@ -8,6 +8,12 @@
 local _, B = ...
 local M = B:NewModule("Buffs")
 
+-- fonts: this file uses the "auras" section font (/bui > General > Fonts)
+local FONT_SECTION = "auras"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.buffs end
 
 local anchor, buffBox, debuffBox
@@ -89,10 +95,10 @@ local function StyleSecure(btn)
 	btn.icon:SetPoint("BOTTOMRIGHT", -1, 1)
 	B:SkinIcon(btn.icon, btn)
 	btn.count = btn:CreateFontString(nil, "OVERLAY")
-	B:SetFont(btn.count, math.max(8, math.floor(d.size * 0.40)))
+	SetFont(btn.count, math.max(8, math.floor(d.size * 0.40)))
 	btn.count:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 1, 1)
 	btn.time = btn:CreateFontString(nil, "OVERLAY")
-	B:SetFont(btn.time, d.fontSize)
+	SetFont(btn.time, d.fontSize)
 	btn.time:SetPoint("TOP", btn, "BOTTOM", 0, -2)
 	btn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
@@ -201,8 +207,8 @@ function M:LayoutSecure()
 		for _, h in ipairs(headers) do h:SetShown(d.enabled) end
 	end)
 	EachButton(function(b)
-		if b.count then B:SetFont(b.count, math.max(8, math.floor(d.size * 0.40))) end
-		if b.time then B:SetFont(b.time, d.fontSize) end
+		if b.count then SetFont(b.count, math.max(8, math.floor(d.size * 0.40))) end
+		if b.time then SetFont(b.time, d.fontSize) end
 	end)
 	anchor:SetSize(d.perRow * step, d.size)
 	B:SetMoverEnabled("buffs", d.enabled)

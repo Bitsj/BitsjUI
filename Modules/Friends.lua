@@ -13,6 +13,12 @@
 local _, B = ...
 local M = B:NewModule("Friends")
 
+-- fonts: this file uses the "windows" section font (/bui > General > Fonts)
+local FONT_SECTION = "windows"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.friends end
 
 -- localized class name -> class file ("Paladin" -> "PALADIN")
@@ -39,8 +45,8 @@ end
 local function SkinButton(btn)
 	if btn.bSkinned then return end
 	btn.bSkinned = true
-	if btn.name then B:SetFont(btn.name, 12) end
-	if btn.info then B:SetFont(btn.info, 10) end
+	if btn.name then SetFont(btn.name, 12) end
+	if btn.info then SetFont(btn.info, 10) end
 	local hl = btn.highlight or btn:GetHighlightTexture()
 	if hl then
 		hl:SetTexture(B.white)
@@ -133,7 +139,7 @@ function M:Skin()
 	-- the little "who / add friend / send message" buttons keep Blizzard's style; the
 	-- broadcast box and status dropdown get the UI font where they have text
 	local status = _G.FriendsFrameBattlenetFrame
-	if status and status.Tag then B:SetFont(status.Tag, 12) end
+	if status and status.Tag then SetFont(status.Tag, 12) end
 end
 
 function M:OnEnable()

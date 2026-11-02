@@ -2,3 +2,6 @@
 *.zip
 .DS_Store
 Thumbs.db
+# paid fonts, local only
+Media/Fonts/Expressway.ttf
+Media/Fonts/Custom.ttf

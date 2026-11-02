@@ -11,6 +11,12 @@
 local _, B = ...
 local M = B:NewModule("Timers")
 
+-- fonts: this file uses the "auras" section font (/bui > General > Fonts)
+local FONT_SECTION = "auras"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local issecret = B.IsSecret
 local function db() return B.db.timers end
 
@@ -108,9 +114,9 @@ local function StyleBar(bar)
 	bar.sb:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
 	bar.sb:SetStatusBarTexture(B:GetTexture())
 	bar.sb.bg:SetTexture(B:GetTexture())
-	B:SetFont(bar.name, d.fontSize)
-	B:SetFont(bar.time, d.fontSize - 2)
-	B:SetFont(bar.count, d.fontSize - 2)
+	SetFont(bar.name, d.fontSize)
+	SetFont(bar.time, d.fontSize - 2)
+	SetFont(bar.count, d.fontSize - 2)
 	bar.name:SetWidth(M:Width() - d.height - 50)
 end
 

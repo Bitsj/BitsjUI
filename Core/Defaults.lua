@@ -28,6 +28,11 @@ local function unit(t)
 end
 
 B.defaults = {
+	-- per-section fonts; "" = the overall font (general.font)
+	fonts = {
+		unitframes = "", raidframes = "", nameplates = "", castbars = "", actionbars = "", auras = "",
+		meter = "", chat = "", minimap = "", quests = "", windows = "",
+	},
 	general = {
 		uiScale = 0.62,
 		updateNotify = true,         -- tell me when someone in guild / group has a newer BitsjUI

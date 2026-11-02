@@ -10,6 +10,12 @@
 local _, B = ...
 local M = B:NewModule("Nameplates")
 
+-- fonts: this file uses the "nameplates" section font (/bui > General > Fonts)
+local FONT_SECTION = "nameplates"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local issecret = B.IsSecret
 local active = {}   -- unit -> our plate
 
@@ -340,9 +346,9 @@ local function UpdateAuras(np)
 			local size = d.debuffSize
 			btn:SetSize(size, math.floor(size * 0.75))
 			btn.icon:SetTexCoord(0.08, 0.92, 0.18, 0.82)
-			B:SetFont(btn.count, math.max(8, math.floor(size * 0.45)))
+			SetFont(btn.count, math.max(8, math.floor(size * 0.45)))
 			local cdText = btn.cd.GetCountdownFontString and btn.cd:GetCountdownFontString()
-			if cdText then B:SetFont(cdText, math.max(8, math.floor(size * 0.45))) end
+			if cdText then SetFont(cdText, math.max(8, math.floor(size * 0.45))) end
 			btn:ClearAllPoints()
 			btn:SetPoint("BOTTOMLEFT", np.health, "TOPLEFT", (shown - 1) * (size + 2), 4)
 			pcall(btn.icon.SetTexture, btn.icon, aura.icon)
@@ -846,8 +852,8 @@ local function Layout(np)
 	t[4]:ClearAllPoints(); t[4]:SetPoint("TOPLEFT", np.health, "TOPRIGHT", o, o); t[4]:SetPoint("BOTTOMLEFT", np.health, "BOTTOMRIGHT", o, -o); t[4]:SetWidth(w)
 	np.health:SetStatusBarTexture(B:GetTexture())
 	np.health.bg:SetTexture(B:GetTexture())
-	B:SetFont(np.hpText, d.fontSize)
-	B:SetFont(np.name, d.nameSize)
+	SetFont(np.hpText, d.fontSize)
+	SetFont(np.name, d.nameSize)
 	-- target decorations
 	np.glow:ClearAllPoints()
 	np.glow:SetPoint("TOPLEFT", np.health, "TOPLEFT", -10, 10)
@@ -860,7 +866,7 @@ local function Layout(np)
 	np.arrowR:ClearAllPoints()
 	np.arrowR:SetPoint("LEFT", np.health, "RIGHT", d.showLevel and d.nameAbove and 22 or 4, 0)
 	np.name:SetWidth(d.width + 40)
-	B:SetFont(np.level, d.fontSize)
+	SetFont(np.level, d.fontSize)
 	-- with the kick icon on the right the bar is centred between the two icons
 	local withKick = d.kickIndicator and kick
 	local ks = d.kickSize or 18
@@ -870,7 +876,7 @@ local function Layout(np)
 	np.cast:SetPoint("TOP", d.nameAbove and np.health or np.name, "BOTTOM", (left - right) / 2, d.nameAbove and -4 or -3)
 	local cb = np.cast
 	cb.kick:SetSize(ks, ks)
-	B:SetFont(cb.kick.text, math.max(8, math.floor(ks * 0.55)))
+	SetFont(cb.kick.text, math.max(8, math.floor(ks * 0.55)))
 	cb.edge:Place(cb.icon, cb, px)
 	cb.kick.edge:Place(cb.kick, cb.kick, px)
 	cb.tick:SetWidth(math.max(px * 3, 2))
@@ -878,7 +884,7 @@ local function Layout(np)
 
 	np.cast:SetStatusBarTexture(B:GetTexture())
 	np.cast.icon:SetSize(d.castHeight, d.castHeight)
-	B:SetFont(np.cast.text, math.max(7, d.castHeight - 1))
+	SetFont(np.cast.text, math.max(7, d.castHeight - 1))
 	np.cast.text:SetWidth(d.width - 10)
 end
 
@@ -1078,7 +1084,7 @@ function M:Preview(on)
 		end
 		sample.unit = UnitExists("target") and "target" or "player"
 		sample:SetFrameStrata("DIALOG")
-		B:SetFont(sample.label, 11)
+		SetFont(sample.label, 11)
 		sample.label:SetText(B:TitleText() .. " nameplate preview")
 		Layout(sample)
 		CreateBoxes(sample)

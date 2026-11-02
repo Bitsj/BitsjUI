@@ -10,6 +10,12 @@
 local _, B = ...
 local M = B:NewModule("CooldownManager")
 
+-- fonts: this file uses the "actionbars" section font (/bui > General > Fonts)
+local FONT_SECTION = "actionbars"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local VIEWERS = { "EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer" }
 M.VIEWERS = VIEWERS
 
@@ -72,7 +78,7 @@ local function StyleItem(item)
 		cd:ClearAllPoints()
 		cd:SetAllPoints(icon)
 		local fs = cd.GetCountdownFontString and cd:GetCountdownFontString()
-		if fs then B:SetFont(fs, d.countdownSize) end
+		if fs then SetFont(fs, d.countdownSize) end
 	end
 
 	-- stack / charge counters (names differ between viewers)
@@ -82,7 +88,7 @@ local function StyleItem(item)
 		type(item.ChargeCount) == "table" and item.ChargeCount.Current or nil,
 	}
 	for _, fs in ipairs(counters) do
-		if type(fs) == "table" and fs.SetFont then B:SetFont(fs, d.countSize) end
+		if type(fs) == "table" and fs.SetFont then SetFont(fs, d.countSize) end
 	end
 
 	-- buff bars
@@ -103,7 +109,7 @@ local function StyleItem(item)
 			B:CreateBorder(bar, 0, 0, 0, 1)
 		end
 		for _, key in ipairs({ "Name", "Duration" }) do
-			if type(bar[key]) == "table" and bar[key].SetFont then B:SetFont(bar[key], d.barFontSize) end
+			if type(bar[key]) == "table" and bar[key].SetFont then SetFont(bar[key], d.barFontSize) end
 		end
 	end
 end

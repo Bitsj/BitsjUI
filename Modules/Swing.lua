@@ -17,6 +17,12 @@
 local _, B = ...
 local M = B:NewModule("Swing")
 
+-- fonts: this file uses the "castbars" section font (/bui > General > Fonts)
+local FONT_SECTION = "castbars"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.swing end
 
 local frame          -- holder above the castbar
@@ -65,9 +71,9 @@ local function CreateBar(key)
 	sb:SetMinMaxValues(0, 1)
 	sb:SetValue(0)
 	B:CreateBorder(sb, 0, 0, 0, 1, B:Pixel(sb))
-	sb.label = B:CreateText(sb, db().fontSize, "LEFT")
+	sb.label = CreateText(sb, db().fontSize, "LEFT")
 	sb.label:SetPoint("LEFT", sb, "LEFT", 4, 0)
-	sb.time = B:CreateText(sb, db().fontSize, "RIGHT")
+	sb.time = CreateText(sb, db().fontSize, "RIGHT")
 	sb.time:SetPoint("RIGHT", sb, "RIGHT", -4, 0)
 	sb.spark = sb:CreateTexture(nil, "OVERLAY")
 	sb.spark:SetColorTexture(1, 1, 1, 0.9)
@@ -270,8 +276,8 @@ function M:Layout()
 		local r, g, b = ColorFor(key)
 		sb:SetStatusBarColor(r, g, b)
 		sb.bg:SetVertexColor(r * 0.18, g * 0.18, b * 0.18, 0.9)
-		B:SetFont(sb.label, d.fontSize)
-		B:SetFont(sb.time, d.fontSize)
+		SetFont(sb.label, d.fontSize)
+		SetFont(sb.time, d.fontSize)
 		sb.label:SetText(d.showText and LABEL[key] or "")
 		if not Wanted(key) then sb.start = nil; sb:Hide() end
 	end

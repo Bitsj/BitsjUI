@@ -14,6 +14,12 @@
 local _, B = ...
 local M = B:NewModule("Defensives")
 
+-- fonts: this file uses the "auras" section font (/bui > General > Fonts)
+local FONT_SECTION = "auras"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.defensives end
 
 -- [spellID] = true. Buff IDs as they appear on the player.
@@ -159,8 +165,8 @@ function M:Layout()
 		for _, btn in ipairs(icons) do
 			btn:SetSize(d.size, d.size)
 			local cdText = btn.cd.GetCountdownFontString and btn.cd:GetCountdownFontString()
-			if cdText then B:SetFont(cdText, math.max(8, math.floor(d.size * 0.42))) end
-			B:SetFont(btn.count, math.max(8, math.floor(d.size * 0.40)))
+			if cdText then SetFont(cdText, math.max(8, math.floor(d.size * 0.42))) end
+			SetFont(btn.count, math.max(8, math.floor(d.size * 0.40)))
 		end
 		Scan()
 	end

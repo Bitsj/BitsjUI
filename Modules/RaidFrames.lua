@@ -14,6 +14,12 @@
 local _, B = ...
 local M = B:NewModule("RaidFrames")
 
+-- fonts: this file uses the "raidframes" section font (/bui > General > Fonts)
+local FONT_SECTION = "raidframes"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local issecret = B.IsSecret
 local function db() return B.db.raidframes end
 -- party and raid each have their own look; b.kind says which a tile belongs to
@@ -204,8 +210,8 @@ local function LayoutButton(b)
 	local tex = B:GetTexture()
 	b.health:SetStatusBarTexture(tex)
 	b.health.bg:SetTexture(tex)
-	B:SetFont(b.name, d.nameSize); b.name.bSize = d.nameSize
-	B:SetFont(b.status, d.nameSize - 1); b.status.bSize = d.nameSize - 1
+	SetFont(b.name, d.nameSize); b.name.bSize = d.nameSize
+	SetFont(b.status, d.nameSize - 1); b.status.bSize = d.nameSize - 1
 	b.name:ClearAllPoints()
 	b.name:SetPoint("TOPLEFT", b, "TOPLEFT", d.roleIcon and 14 or 4, -3)
 	b.name:SetPoint("TOPRIGHT", b, "TOPRIGHT", -3, -3)
@@ -258,8 +264,8 @@ local function StyleButton(b, kind)
 	local overlay = CreateFrame("Frame", nil, b)
 	overlay:SetAllPoints(b)
 	overlay:SetFrameLevel(hp:GetFrameLevel() + 3)
-	b.name = B:CreateText(overlay, K(b).nameSize, "LEFT")
-	b.status = B:CreateText(overlay, K(b).nameSize - 1, "CENTER")
+	b.name = CreateText(overlay, K(b).nameSize, "LEFT")
+	b.status = CreateText(overlay, K(b).nameSize - 1, "CENTER")
 	b.status:SetPoint("CENTER", b, "CENTER", 0, -4)
 	b.status:SetTextColor(0.85, 0.85, 0.88)
 	b.role = overlay:CreateTexture(nil, "OVERLAY")
@@ -357,7 +363,7 @@ function M:Arrange()
 		size(h, R)
 		h:ClearAllPoints()
 		h:SetPoint("TOPLEFT", holderRaid, "TOPLEFT", (i - 1) * (R.width + R.spacing), -(R.groupLabels and 16 or 0))
-		B:SetFont(h.label, 12)
+		SetFont(h.label, 12)
 		h.label:SetTextColor(1, 0.82, 0.1)
 	end
 	partyHeader:ClearAllPoints()
@@ -456,8 +462,8 @@ local function PreviewTile(kind, i)
 	local overlay = CreateFrame("Frame", nil, b)
 	overlay:SetAllPoints(b)
 	overlay:SetFrameLevel(b.health:GetFrameLevel() + 3)
-	b.name = B:CreateText(overlay, K(b).nameSize, "LEFT")
-	b.status = B:CreateText(overlay, K(b).nameSize - 1, "CENTER")
+	b.name = CreateText(overlay, K(b).nameSize, "LEFT")
+	b.status = CreateText(overlay, K(b).nameSize - 1, "CENTER")
 	b.status:SetPoint("CENTER", b, "CENTER", 0, -4)
 	b.status:SetTextColor(0.85, 0.85, 0.88)
 	b.role = overlay:CreateTexture(nil, "OVERLAY")
@@ -576,7 +582,7 @@ function M:OnEnable()
 		h:SetAttribute("showRaid", true)
 		h:SetAttribute("groupFilter", tostring(i))
 		h.label = holderRaid:CreateFontString(nil, "OVERLAY")
-		B:SetFont(h.label, 12)
+		SetFont(h.label, 12)
 		h.label:SetPoint("BOTTOM", h, "TOP", 0, 3)
 		h.label:SetText("Group " .. i)
 		raidHeaders[i] = h

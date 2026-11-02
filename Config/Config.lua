@@ -120,9 +120,9 @@ pages[#pages + 1] = { key = "general", label = "General", build = function(lay)
 	lay:Text("Your screen is " .. tostring(w) .. "x" .. tostring(h) .. ". Pixel-perfect scale for 1440p is 0.533; 0.62 makes everything a little larger while staying crisp.")
 
 	lay:Header("Font and texture")
-	O.dropdown(lay, "Font", "general.font", FontOptions, function()
+	O.dropdown(lay, "Overall font", "general.font", FontOptions, function()
 		B:GetModule("General"):Update(); B:UpdateAll()
-	end)
+	end, "The font for the whole UI. Sections set to \"Same as overall\" below follow it.")
 	O.dropdown(lay, "Outline", "general.fontOutline", B.outlines, function() B:RefreshFonts(); B:UpdateAll() end)
 	O.dropdown(lay, "Bar texture", "general.texture", TextureOptions, function() B:RefreshTextures(); B:UpdateAll() end)
 	O.slider(lay, "Bar colour brightness", "general.colorBrightness", 0.5, 1, 0.01, function() B:RefreshBarColors() end, "%.2f",
@@ -138,6 +138,21 @@ pages[#pages + 1] = { key = "general", label = "General", build = function(lay)
 	}, function() B:RefreshBorders() end)
 	O.slider(lay, "Corner roundness", "general.cornerRadius", 2, 8, 1, function() B:RefreshBorders() end)
 	O.slider(lay, "Icon crop", "general.iconZoom", 0, 0.2, 0.01, function() B:RefreshIcons() end, "%.2f")
+
+	lay:Header("Font per section")
+	lay:Text("Give any part of the UI its own font. \"Same as overall\" follows the overall font above. Some text only changes after a /reload.")
+	local function SectionFonts()
+		local out = { { value = "", label = "Same as overall" } }
+		for _, o in ipairs(FontOptions()) do out[#out + 1] = o end
+		return out
+	end
+	for _, sec in ipairs(B.FONT_SECTIONS) do
+		O.dropdown(lay, sec.label, "fonts." .. sec.key, SectionFonts, function() B:RefreshFonts(); B:UpdateAll() end)
+	end
+	lay:Add(W.Button(lay.content, "All sections: same as overall", 240, 26, function()
+		for _, sec in ipairs(B.FONT_SECTIONS) do B.db.fonts[sec.key] = "" end
+		B:RefreshFonts(); B:UpdateAll(); lay:RefreshAll()
+	end))
 	O.slider(lay, "Icon inner shadow", "general.iconShadow", 0, 1, 0.05, function() B:RefreshIcons() end, "%.2f")
 	O.slider(lay, "Icon gloss", "general.iconGloss", 0, 1, 0.05, function() B:RefreshIcons() end, "%.2f")
 	O.check(lay, "Use the font in the whole game *", "general.replaceGameFonts", "General",

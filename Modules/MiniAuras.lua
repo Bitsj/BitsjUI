@@ -92,7 +92,7 @@ function M:ApplyTo(db)
 	local m = db.Modules
 	-- look
 	if LibStub and LibStub("LibSharedMedia-3.0", true) then
-		local fontName = "Bitsj " .. (B.db.general.font or "Barlow")
+		local fontName = "Bitsj " .. (B:FontName("raidframes") or "Barlow")
 		if LibStub("LibSharedMedia-3.0"):IsValid("font", fontName) then Set(db, "Font", fontName) end
 	end
 	Set(db, "IconZoom", true)

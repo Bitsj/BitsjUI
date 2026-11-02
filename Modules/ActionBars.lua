@@ -8,6 +8,12 @@
 local _, B = ...
 local M = B:NewModule("ActionBars")
 
+-- fonts: this file uses the "actionbars" section font (/bui > General > Fonts)
+local FONT_SECTION = "actionbars"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local BARS = {
 	[1] = { blizz = { "MainActionBar", "MainMenuBar" }, prefix = "ActionButton", num = 12, label = "Action bar 1", default = { "BOTTOM", "BOTTOM", 0, 6 } },
 	[2] = { blizz = { "MultiBarBottomLeft" }, prefix = "MultiBarBottomLeftButton", num = 12, label = "Action bar 2", default = { "BOTTOM", "BOTTOM", 0, 46 } },
@@ -57,7 +63,7 @@ local function ShortenHotkey(button)
 		return
 	end
 	hk:SetAlpha(1)
-	B:SetFont(hk, db.hotkeySize)
+	SetFont(hk, db.hotkeySize)
 	if not db.abbreviate then return end
 	local text = hk:GetText()
 	if not text or text == "" or text == RANGE_INDICATOR then return end
@@ -297,7 +303,7 @@ local function SkinButton(button)
 			c:SetFrameLevel(level + 1 + i)
 		end
 		local fs = button.bCD.GetCountdownFontString and button.bCD:GetCountdownFontString()
-		if fs then B:SetFont(fs, size) end
+		if fs then SetFont(fs, size) end
 	end
 	if button.bBorder then button.bBorder:SetFrameLevel(level + 6) end
 
@@ -311,14 +317,14 @@ local function SkinButton(button)
 	end
 	local count = Region(button, "Count", "Count")
 	if count then
-		B:SetFont(count, db.countSize)
+		SetFont(count, db.countSize)
 		count:ClearAllPoints()
 		count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 3)
 		count:SetAlpha(db.showCount and 1 or 0)
 	end
 	local macro = Region(button, "Name", "Name")
 	if macro then
-		B:SetFont(macro, db.macroSize)
+		SetFont(macro, db.macroSize)
 		macro:ClearAllPoints()
 		macro:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, 3)
 		macro:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 3)

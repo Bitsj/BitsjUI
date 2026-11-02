@@ -5,6 +5,12 @@
 local _, B = ...
 local M = B:NewModule("Chat")
 
+-- fonts: this file uses the "chat" section font (/bui > General > Fonts)
+local FONT_SECTION = "chat"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.chat end
 
 local buttons = { "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton", "ChatFrameToggleVoiceMuteButton", "QuickJoinToastButton" }
@@ -33,7 +39,7 @@ local function StyleFrame(cf)
 	-- font (keep Blizzard's per-window size unless a size is set)
 	local _, size = cf:GetFont()
 	local newSize = (d.fontSize and d.fontSize > 0) and d.fontSize or size or 14
-	cf:SetFont(B:GetFont(), newSize, B:Flags(""))
+	cf:SetFont(GetFont(), newSize, B:Flags(""))
 	if d.shadow then
 		cf:SetShadowColor(0, 0, 0, 1)
 		cf:SetShadowOffset(1, -1)
@@ -96,8 +102,8 @@ local function StyleFrame(cf)
 		end
 		B:SetBorderSize(eb.bBox, d.borderSize or 2)
 		local _, ebSize = eb:GetFont()
-		eb:SetFont(B:GetFont(), ebSize or 14, B:Flags(""))
-		if eb.header then eb.header:SetFont(B:GetFont(), ebSize or 14, B:Flags("")) end
+		eb:SetFont(GetFont(), ebSize or 14, B:Flags(""))
+		if eb.header then eb.header:SetFont(GetFont(), ebSize or 14, B:Flags("")) end
 	end
 
 	-- tabs
@@ -109,7 +115,7 @@ local function StyleFrame(cf)
 		end
 		local text = tab.Text or _G[name .. "TabText"]
 		if text then
-			text:SetFont(B:GetFont(), d.tabFontSize or 13, B:GetOutline())
+			text:SetFont(GetFont(), d.tabFontSize or 13, B:GetOutline())
 			text:SetShadowColor(0, 0, 0, 1)
 			text:SetShadowOffset(1, -1)
 		end

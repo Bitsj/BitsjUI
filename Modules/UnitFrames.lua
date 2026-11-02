@@ -7,6 +7,12 @@
 ]]
 local _, B = ...
 local M = B:NewModule("UnitFrames")
+
+-- fonts: this file uses the "unitframes" section font (/bui > General > Fonts)
+local FONT_SECTION = "unitframes"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
 M.frames = {}
 
 local issecret = B.IsSecret
@@ -288,7 +294,7 @@ local function AuraButton(f, list, i)
 	btn.cd:SetDrawEdge(false)
 	btn.cd:SetReverse(true)
 	btn.count = btn:CreateFontString(nil, "OVERLAY")
-	B:SetFont(btn.count, 11)
+	SetFont(btn.count, 11)
 	btn.count:SetPoint("BOTTOMRIGHT", -1, 1)
 	btn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
@@ -584,11 +590,11 @@ local function CreateUnitFrame(def)
 	f.overlay = overlay
 
 	local db = B.db.unitframes
-	f.nameText = B:CreateText(overlay, db.nameSize, "LEFT")
-	f.healthText = B:CreateText(overlay, db.fontSize, "CENTER")
-	f.healthPct = B:CreateText(overlay, db.fontSize, "RIGHT")
-	f.powerText = B:CreateText(overlay, db.smallFontSize, "CENTER")
-	f.levelText = B:CreateText(overlay, db.nameSize, "RIGHT")
+	f.nameText = CreateText(overlay, db.nameSize, "LEFT")
+	f.healthText = CreateText(overlay, db.fontSize, "CENTER")
+	f.healthPct = CreateText(overlay, db.fontSize, "RIGHT")
+	f.powerText = CreateText(overlay, db.smallFontSize, "CENTER")
+	f.levelText = CreateText(overlay, db.nameSize, "RIGHT")
 
 	if key == "target" or key == "focus" then
 		local badge = CreateFrame("Frame", nil, overlay)
@@ -596,7 +602,7 @@ local function CreateUnitFrame(def)
 		local t = badge:CreateTexture(nil, "ARTWORK")
 		t:SetAllPoints()
 		t:SetTexture(MEDIA .. "Badge")
-		badge.text = B:CreateText(badge, 10, "CENTER")
+		badge.text = CreateText(badge, 10, "CENTER")
 		badge.text:SetPoint("CENTER", 0, 0)
 		f.badge = badge
 	end
@@ -723,12 +729,12 @@ function M:LayoutFrame(key)
 	local inset = showPortrait and 8 or 0
 
 	-- fonts
-	B:SetFont(f.nameText, db.nameSize); f.nameText.bSize = db.nameSize
+	SetFont(f.nameText, db.nameSize); f.nameText.bSize = db.nameSize
 	local hs = math.min(db.fontSize, math.max(8, c.healthHeight - 4))
-	B:SetFont(f.healthText, hs); f.healthText.bSize = hs
-	B:SetFont(f.healthPct, hs); f.healthPct.bSize = hs
+	SetFont(f.healthText, hs); f.healthText.bSize = hs
+	SetFont(f.healthPct, hs); f.healthPct.bSize = hs
 	local ps2 = math.min(db.smallFontSize, math.max(7, ph))
-	B:SetFont(f.powerText, ps2); f.powerText.bSize = ps2
+	SetFont(f.powerText, ps2); f.powerText.bSize = ps2
 
 	-- texts
 	f.healthText:ClearAllPoints()
@@ -766,7 +772,7 @@ function M:LayoutFrame(key)
 		f.nameText:SetJustifyH(mirrored and "RIGHT" or "LEFT")
 		f.nameText:SetWidth(c.width - inset)
 	end
-	B:SetFont(f.levelText, db.nameSize); f.levelText.bSize = db.nameSize
+	SetFont(f.levelText, db.nameSize); f.levelText.bSize = db.nameSize
 	f.levelText:ClearAllPoints()
 	f.levelText:SetPoint(mirrored and "BOTTOMLEFT" or "BOTTOMRIGHT", f.bars, mirrored and "TOPLEFT" or "TOPRIGHT", 0, 3)
 	f.levelText:SetJustifyH(mirrored and "LEFT" or "RIGHT")

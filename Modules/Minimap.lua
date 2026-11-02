@@ -7,6 +7,12 @@
 local _, B = ...
 local M = B:NewModule("Minimap")
 
+-- fonts: this file uses the "minimap" section font (/bui > General > Fonts)
+local FONT_SECTION = "minimap"
+local function SetFont(fs, size, outline) return B:SetFont(fs, size, outline, FONT_SECTION) end
+local function CreateText(parent, size, justify, layer) return B:CreateText(parent, size, justify, layer, FONT_SECTION) end
+local function GetFont() return B:GetFont(nil, FONT_SECTION) end
+
 local function db() return B.db.minimap end
 
 local function Hide(region)
@@ -77,7 +83,7 @@ local function Box(parent)
 	bg:SetAllPoints()
 	bg:SetColorTexture(0.05, 0.05, 0.06, 0.9)
 	B:CreateBorder(f, 0, 0, 0, 1)
-	f.text = B:CreateText(f, 12, "CENTER")
+	f.text = CreateText(f, 12, "CENTER")
 	f.text:SetPoint("LEFT", 4, 0)
 	f.text:SetPoint("RIGHT", -4, 0)
 	return f
@@ -180,7 +186,7 @@ function M:OnEnable()
 	if not db().enabled then return end
 	header = Box(Minimap)
 	header:SetHeight(18)
-	header.clock = B:CreateText(header, 11, "RIGHT")
+	header.clock = CreateText(header, 11, "RIGHT")
 	header.clock:SetPoint("RIGHT", header, "RIGHT", -6, 0)
 	-- faction emblem at the start of the bar
 	header.crest = header:CreateTexture(nil, "OVERLAY")
@@ -191,10 +197,10 @@ function M:OnEnable()
 	overlay = CreateFrame("Frame", nil, Minimap)
 	overlay:SetAllPoints(Minimap)
 	overlay:SetFrameLevel(Minimap:GetFrameLevel() + 5)
-	overlay.zone = B:CreateText(overlay, 13, "CENTER")
+	overlay.zone = CreateText(overlay, 13, "CENTER")
 	overlay.zone:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 4, -6)
 	overlay.zone:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -4, -6)
-	overlay.coords = B:CreateText(overlay, 12, "CENTER")
+	overlay.coords = CreateText(overlay, 12, "CENTER")
 	overlay.coords:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, 6)
 
 	overlay.elapsed = 0
