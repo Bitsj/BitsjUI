@@ -1520,7 +1520,7 @@ SlashCmdList.BITSJUI = function(msg)
 		for name, file in pairs(B.media.fonts) do
 			local probe = UIParent:CreateFontString(nil, "BACKGROUND")
 			local ok, result = pcall(probe.SetFont, probe, file, 12, "")
-			probe:SetText("Expressway 123")
+			if ok and result ~= false then probe:SetText("Expressway 123") end
 			B:Print(string.format("%s: loads=%s, result=%s, width=%.1f, path=%s", name, tostring(ok), tostring(result),
 				probe:GetStringWidth() or 0, tostring((probe:GetFont()))))
 		end
