@@ -1520,8 +1520,6 @@ SlashCmdList.BITSJUI = function(msg)
 		-- (fonts load in the background), then prints one line per font.
 		local list = {}
 		for name, file in pairs(B.media.fonts) do list[name] = file end
-		list["TEST copy of Outfit"] = B.mediaPath .. "Fonts\\Extra\\TestOutfit.ttf"
-		list["TEST copy of Outfit (Fonts folder)"] = B.mediaPath .. "Fonts\\TestOutfit.ttf"
 		local holder = CreateFrame("Frame", nil, UIParent)
 		holder:SetSize(1, 1); holder:SetPoint("TOPLEFT", UIParent, "TOPLEFT", -500, 500); holder:Show()
 		local fs, state = {}, {}
@@ -1531,8 +1529,7 @@ SlashCmdList.BITSJUI = function(msg)
 					fs[name] = fs[name] or holder:CreateFontString(nil, "OVERLAY")
 					local ok, result = pcall(fs[name].SetFont, fs[name], file, 14, "")
 					if not ok then state[name] = "MISSING (file not found)"
-					elseif result == false then state[name] = "NOT LOADED"
-					else fs[name]:SetText("Expressway 123"); state[name] = "OK" end
+					else state[name] = "OK" end
 				end
 			end
 		end
@@ -1552,8 +1549,8 @@ SlashCmdList.BITSJUI = function(msg)
 				for _, name in ipairs(names) do
 					if state[name] == "OK" then good[#good + 1] = name else bad[#bad + 1] = name .. " = " .. state[name] end
 				end
-				B:Print("|cff55ff55Loaded:|r " .. table.concat(good, ", "))
-				B:Print("|cffff5555Not loaded:|r " .. table.concat(bad, ", "))
+				B:Print("|cff55ff55Found:|r " .. table.concat(good, ", "))
+				B:Print("|cffff5555Missing:|r " .. table.concat(bad, ", "))
 			end
 		end)
 	elseif cmd == "errors" or cmd == "error" then

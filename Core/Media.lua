@@ -119,76 +119,34 @@ function B:GetTextureList()
 	return list
 end
 
--- font probing: a missing Custom.ttf must never leave text invisible
+-- Fonts. The game loads addon font files in the background and SetFont's
+-- answer can't be trusted for "does this font work" (it says no for fonts
+-- that are fine). EllesmereUI simply sets its fonts; so does BitsjUI now.
+-- The only thing checked is a missing file: SetFont then raises
+-- "file not found", and that font is skipped.
 local probe
--- Font state: "ok" (loaded), "pending" (the file is there but the game is
--- still loading it; right after login every addon font starts out like this)
--- or "missing" (no such file: SetFont errors with "file not found").
 local fontState = {}
-local pending = {}
-function B.FontState(file)
-	if fontState[file] == "ok" or fontState[file] == "missing" then return fontState[file] end
-	probe = probe or UIParent:CreateFontString(nil, "BACKGROUND")
-	probe:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
-	local okCall, result = pcall(probe.SetFont, probe, file, 12, "")
-	local state
-	if not okCall then
-		state = "missing"
-	elseif result == false then
-		state = "pending"
-	else
-		local current = probe:GetFont()
-		state = (current and current:lower():gsub("/", "\\") == file:lower()) and "ok" or "pending"
-		-- old clients return nothing: make sure the font really draws
-		if state == "ok" and result ~= true then
-			probe:SetText("Expressway 123")
-			if (probe:GetStringWidth() or 0) <= 1 then state = "pending" end
-		end
-	end
-	fontState[file] = state
-	if state == "pending" then pending[file] = true; B:RetryFonts() else pending[file] = nil end
-	return state
-end
-
--- true when the font can be used right now
-function B.FontWorks(file)
-	return B.FontState(file) == "ok"
-end
-
--- true when the font file exists (loaded or still loading)
 function B.FontExists(file)
-	return B.FontState(file) ~= "missing"
+	if fontState[file] ~= nil then return fontState[file] end
+	probe = probe or UIParent:CreateFontString(nil, "BACKGROUND")
+	local ok = pcall(probe.SetFont, probe, file, 12, "")
+	fontState[file] = ok and true or false
+	return fontState[file]
 end
+B.FontWorks = B.FontExists
 
--- Fonts still loading: look again every second and re-apply all text once
--- one of them is ready.
-local tries = 0
-function B:RetryFonts()
-	if self.fontRetryQueued or not C_Timer then return end
-	if tries >= 30 then
-		-- never loaded: treat as missing (old clients don't report missing files)
-		for file in pairs(pending) do fontState[file] = "missing"; pending[file] = nil end
-		return
-	end
-	self.fontRetryQueued = true
-	tries = tries + 1
-	C_Timer.After(1, function()
-		B.fontRetryQueued = false
-		local changed = false
-		for file in pairs(pending) do
-			fontState[file] = nil
-			if B.FontState(file) == "ok" then changed = true end
-		end
-		if changed and B.db then
-			B:Try(B.RefreshFonts, B)
-			B:Try(B.UpdateAll, B)
-		end
-	end)
-end
-
--- start loading every font as early as possible (right when BitsjUI loads)
+-- Text drawn before a font has finished loading keeps its previous font, so
+-- apply all fonts again a little after login.
+function B:RetryFonts() end
 function B:PreloadFonts()
-	for _, file in pairs(self.media.fonts) do pcall(B.FontState, file) end
+	for _, file in pairs(self.media.fonts) do pcall(B.FontExists, file) end
+	if C_Timer then
+		for _, t in ipairs({ 2, 6, 15 }) do
+			C_Timer.After(t, function()
+				if B.db then B:Try(B.RefreshFonts, B); B:Try(B.UpdateAll, B) end
+			end)
+		end
+	end
 end
 
 -- Font sections: each part of the UI can use its own font, or "" for the
@@ -221,10 +179,7 @@ function B:GetFont(name, section)
 		local LSM = GetLSM()
 		file = LSM and LSM:Fetch("font", name, true)
 	end
-	if not file or not B.FontWorks(file) then
-		file = self.media.fonts["Inter"]
-		if not B.FontWorks(file) then file = "Fonts\\FRIZQT__.TTF" end
-	end
+	if not file or not B.FontExists(file) then file = self.media.fonts["Inter"] end
 	return file
 end
 
@@ -269,7 +224,11 @@ end
 function B:SetFont(fs, size, outline, section)
 	if not fs or not fs.SetFont then return end
 	if section then fs.bFontSection = section end
-	fs:SetFont(self:GetFont(nil, fs.bFontSection), size or 12, outline and self:Flags(outline) or self:GetOutline())
+	local flags = outline and self:Flags(outline) or self:GetOutline()
+	local file = self:GetFont(nil, fs.bFontSection)
+	-- a safe font first: if the chosen one isn't loaded yet, the text keeps this
+	if not (fs.GetFont and fs:GetFont()) then pcall(fs.SetFont, fs, "Fonts\\FRIZQT__.TTF", size or 12, flags) end
+	pcall(fs.SetFont, fs, file, size or 12, flags)
 	if self.db.general.fontShadow then
 		fs:SetShadowColor(0, 0, 0, 1)
 		fs:SetShadowOffset(1, -1)
