@@ -267,10 +267,43 @@ function B:SetAuraBoxFlow(box, anchorPoint, horizontal, vertical, spacing)
 	if spacing then pcall(box.SetFlowLayoutPadding, box, 0, spacing, 0, spacing) end
 end
 
+-- Blizzard's aura containers don't notice when "target" / "focus" point at
+-- another unit: they keep the old unit's auras (frozen bars, debuffs from
+-- earlier targets). So every box on such a unit is refreshed on change.
+local watched = setmetatable({}, { __mode = "k" })   -- box -> unit token
+local REFRESH = { target = "PLAYER_TARGET_CHANGED", focus = "PLAYER_FOCUS_CHANGED" }
+local watcher
+local function Refresh(token)
+	for box, unit in pairs(watched) do
+		local hit = unit == token or (token == "target" and unit == "targettarget")
+			or (token == "group" and type(unit) == "string" and (unit:find("^party") or unit:find("^raid")))
+		if hit then
+			if not Forbidden(box) then
+				pcall(box.SetUnit, box, nil)
+				pcall(box.SetUnit, box, unit)
+				pcall(box.UpdateAllAuras, box)
+			end
+		end
+	end
+end
+
 function B:SetAuraBoxUnit(box, unit)
 	if not box or Forbidden(box) then return end
 	pcall(box.SetUnit, box, unit)
 	pcall(box.UpdateAllAuras, box)
+	watched[box] = unit
+	if not watcher then
+		watcher = CreateFrame("Frame")
+		for _, e in pairs(REFRESH) do pcall(watcher.RegisterEvent, watcher, e) end
+		pcall(watcher.RegisterUnitEvent, watcher, "UNIT_TARGET", "target")
+		pcall(watcher.RegisterEvent, watcher, "GROUP_ROSTER_UPDATE")
+		watcher:SetScript("OnEvent", function(_, event)
+			if event == "PLAYER_TARGET_CHANGED" then Refresh("target")
+			elseif event == "PLAYER_FOCUS_CHANGED" then Refresh("focus")
+			elseif event == "UNIT_TARGET" then Refresh("targettarget")
+			elseif event == "GROUP_ROSTER_UPDATE" then Refresh("group") end   -- party1 can be someone else now
+		end)
+	end
 end
 
 -------------------------------------------------------------------------------
