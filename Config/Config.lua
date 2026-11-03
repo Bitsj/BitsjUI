@@ -443,7 +443,7 @@ end }
 pages[#pages + 1] = { key = "swing", label = "Swing timer", build = function(lay)
 	lay:Header("Swing timer")
 	lay:Text("Bars right above your castbar for your next white hit: main hand, off hand (dual wield) and ranged (Auto Shot, wands, throwing). They pop up while running or while you auto-attack. Heroic Strike, Cleave, Maul and Raptor Strike count as swings, and parrying speeds up your swing like it does in the game.")
-	if B.isForever then lay:Text("|cffffd060WoW Forever hides the combat log from addons, so only the ranged bar (Auto Shot, wands, throwing) works here.|r") end
+	if B.isForever then lay:Text("On WoW Forever the game reports every swing itself (main hand, off hand and ranged). Bars fade while your target is out of range.") end
 	O.check(lay, "Show swing timer *", "swing.enabled", "Swing")
 	O.check(lay, "Above the player castbar", "swing.attachToCastbar", "Swing", "Same width as the castbar. Turn off to move it freely with the movers.")
 	O.check(lay, "Melee", "swing.melee", "Swing")

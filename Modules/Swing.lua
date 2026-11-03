@@ -106,7 +106,8 @@ local function Wanted(key)
 	local d = db()
 	if not d.enabled then return false end
 	if key == "ranged" then return d.ranged end
-	if not M.hasLog then return false end   -- melee swings are only visible in the combat log
+	-- melee swings come from the combat log, or (WoW Forever) the PLAYER_SWING event
+	if not (M.hasLog or M.hasSwingEvent) then return false end
 	if key == "oh" then return d.melee and d.offhand end
 	return d.melee
 end
@@ -209,10 +210,31 @@ local function Rescale()
 	end
 end
 
+-- WoW Forever: the game tells us every swing itself (main hand, off hand, ranged)
+local SWING_KEYS = { [0] = "mh", [1] = "oh", [2] = "ranged" }
+
 local function OnEvent(_, event, unit, _, spellID)
-	if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+	if event == "PLAYER_SWING" then
+		local duration, swingType = unit, _   -- event args: swingDuration, swingType
+		local key = SWING_KEYS[B.Plain(swingType, -1)]
+		if not key then return end
+		local d = B.Plain(duration, nil)
+		if not d or d <= 0 then
+			local mh, oh, ranged = Speeds()
+			d = key == "mh" and mh or key == "oh" and oh or ranged
+		end
+		Start(key, d)
+	elseif event == "PLAYER_SWING_RANGE_UPDATE" then
+		local key = SWING_KEYS[B.Plain(unit, -1)]
+		local sb = key and bars[key]
+		if sb then
+			local inRange, checks = B.Plain(_, true), B.Plain(spellID, false)
+			sb:SetAlpha((checks and not inRange) and 0.4 or 1)
+		end
+	elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
 		OnLog()
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+		if M.hasSwingEvent then return end   -- PLAYER_SWING covers ranged shots too
 		if unit == "player" and not B.IsSecret(spellID) and RANGED_IDS[spellID] then
 			local _, _, ranged = Speeds()
 			Start("ranged", ranged)
@@ -308,8 +330,8 @@ end
 
 function M:OnEnable()
 	if not db().enabled then return end
-	-- needs classic game rules; melee also needs the combat log, which the
-	-- modern engine (retail, Forever) hides from addons -> ranged only there
+	-- needs classic game rules. Melee swings come from the combat log (Classic)
+	-- or from the game's own PLAYER_SWING event (WoW Forever)
 	if not B.classicContent then return end
 	M.hasLog = CombatLogGetCurrentEventInfo ~= nil
 	frame = CreateFrame("Frame", "BitsjUISwing", UIParent)
@@ -325,6 +347,16 @@ function M:OnEnable()
 	end
 	for _, e in ipairs({ "UNIT_SPELLCAST_SUCCEEDED", "UNIT_ATTACKSPEED", "UNIT_RANGEDDAMAGE" }) do
 		pcall(ev.RegisterUnitEvent, ev, e, "player")
+	end
+	-- WoW Forever: swing events straight from the game (melee works without the combat log)
+	if Enum and Enum.PlayerSwingType and not M.hasLog then
+		M.hasSwingEvent = pcall(ev.RegisterEvent, ev, "PLAYER_SWING")   -- errors on clients without it
+		if M.hasSwingEvent then
+			pcall(ev.RegisterEvent, ev, "PLAYER_SWING_RANGE_UPDATE")
+			if C_SwingTimer and C_SwingTimer.EnableRangeCheck then
+				for t = 0, 2 do pcall(C_SwingTimer.EnableRangeCheck, t, true) end
+			end
+		end
 	end
 	ev:SetScript("OnEvent", B.Safe(OnEvent))
 	-- every frame: a swing bar has to move smoothly to be readable

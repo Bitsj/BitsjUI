@@ -45,6 +45,7 @@ local function SkinButton(btn)
 	Hide(btn:GetNormalTexture())
 	Hide(btn.IconBorder)
 	Hide(btn.ItemSlotBackground)
+	Hide(btn.EmptyBagIcon)   -- Forever 1.60.1.70755: faded bag icon in empty slots
 	-- dark empty slot
 	local slot = btn:CreateTexture(nil, "BACKGROUND", nil, -7)
 	slot:SetAllPoints(btn)
