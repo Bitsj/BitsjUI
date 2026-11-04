@@ -1076,6 +1076,12 @@ local EVENTS = {
 }
 
 function M:OnEnable()
+	-- quest mobs used to be gold (too close to neutral / rogue yellow): move
+	-- anyone still on the old default to the new purple
+	local q = db().questColor
+	if q and math.abs((q.r or 0) - 0.95) < 0.01 and math.abs((q.g or 0) - 0.80) < 0.01 and math.abs((q.b or 0) - 0.20) < 0.01 then
+		q.r, q.g, q.b = 0.78, 0.36, 1.00
+	end
 	if not db().enabled then
 		B:RunOOC("np_restore", function() M:HideBlizzardPlates(false) end)
 		return

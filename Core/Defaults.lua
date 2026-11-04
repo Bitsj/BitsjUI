@@ -211,7 +211,7 @@ B.defaults = {
 		nameAbove = true,            -- name above the bar, coloured like the bar
 		-- mob type colours (other hostile NPCs keep the plain red)
 		colorByType = true,
-		questColor = color(0.95, 0.80, 0.20),
+		questColor = color(0.78, 0.36, 1.00),     -- purple: stands out from every reaction colour
 		casterColor = color(0.35, 0.55, 1.00),
 		neutralColor = color(0.76, 0.66, 0.42),   -- sandy, apart from the rogue's yellow
 		-- friendly plates; nil = keep the game's own setting until changed here
