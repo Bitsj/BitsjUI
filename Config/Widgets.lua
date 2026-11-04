@@ -77,26 +77,59 @@ function W.Button(parent, text, width, height, onClick, tooltip, template)
 	return b
 end
 
--- A button that runs onClick and then reloads the UI. The reload goes through
--- a secure /reload macro, because Blizzard blocks ReloadUI() called by addons.
+-- A button that runs onClick and then reloads the UI. Blizzard blocks
+-- ReloadUI() from addon code, so the reload goes through a secure /reload
+-- macro button. That secure button is never a child of our windows (a
+-- protected child would stop the window from closing in combat): one shared
+-- secure button floats over whichever reload button the mouse is on.
+local overlay
+local function Overlay()
+	if overlay then return overlay end
+	overlay = CreateFrame("Button", "BitsjUISecureReload", UIParent, "SecureActionButtonTemplate")
+	overlay:SetFrameStrata("TOOLTIP")
+	overlay:RegisterForClicks("AnyUp", "AnyDown")
+	overlay:SetAttribute("type", "macro")
+	overlay:SetAttribute("macrotext", "/reload")
+	overlay:Hide()
+	overlay:SetScript("PreClick", function(self, button, down)
+		-- fires on key down or key up depending on a CVar: run once
+		local useDown = GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")
+		if (down and true or false) ~= (useDown and true or false) then return end
+		local owner = self.owner
+		if owner and owner.bOnReload then owner.bOnReload(owner, button, down) end
+	end)
+	overlay:SetScript("OnEnter", function(self)
+		local owner = self.owner
+		if owner then local f = owner:GetScript("OnEnter"); if f then f(owner) end end
+	end)
+	overlay:SetScript("OnLeave", function(self)
+		local owner = self.owner
+		if owner then local f = owner:GetScript("OnLeave"); if f then f(owner) end end
+		if not InCombatLockdown() then self:Hide(); self:ClearAllPoints() end
+	end)
+	-- combat is about to lock everything: let go of it now
+	local ev = CreateFrame("Frame")
+	ev:RegisterEvent("PLAYER_REGEN_DISABLED")
+	ev:SetScript("OnEvent", function() overlay:Hide(); overlay:ClearAllPoints() end)
+	return overlay
+end
+
 function W.ReloadButton(parent, text, width, height, onClick, tooltip)
-	if InCombatLockdown() then
-		return W.Button(parent, text, width, height, function(...)
-			if onClick then onClick(...) end
-			B:Print("Done. Type /reload to apply it.")
-		end, tooltip)
-	end
-	local b = W.Button(parent, text, width, height, nil, tooltip, "SecureActionButtonTemplate")
-	b:RegisterForClicks("AnyUp", "AnyDown")
-	b:SetAttribute("type", "macro")
-	b:SetAttribute("macrotext", "/reload")
-	if onClick then
-		-- the click fires on key down or key up depending on a CVar: run once
-		b:SetScript("PreClick", function(self, button, down)
-			local useDown = GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")
-			if (down and true or false) == (useDown and true or false) then onClick(self, button, down) end
-		end)
-	end
+	-- the plain button: in combat (no secure overlay) it does the work and asks for /reload
+	local b = W.Button(parent, text, width, height, function(self, ...)
+		if onClick then onClick(self, ...) end
+		B:Print("Done. Type /reload to apply it.")
+	end, tooltip)
+	b.bOnReload = onClick
+	b:HookScript("OnEnter", function(self)
+		if InCombatLockdown() then return end
+		local o = Overlay()
+		if o.owner == self and o:IsShown() then return end
+		o.owner = self
+		o:ClearAllPoints()
+		o:SetAllPoints(self)
+		o:Show()
+	end)
 	return b
 end
 
