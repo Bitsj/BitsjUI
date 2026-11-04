@@ -1,3 +1,17 @@
+# BitsjUI 1.4.0
+
+## New
+- Ready for the **WoW Forever** launch (1.60.1): the melee and off-hand swing timer uses the game's new swing events and fades while you're out of range. The new empty bag-slot icons are hidden.
+- Damage meter: its own settings window (the gear on the meter, or **/bui meter**) with text, font, outline, colours, title bar and update rates for each window. The title bar buttons are now icons.
+- Nameplates: quest mobs are purple, so they stand out. Mobs you need for a quest item (like pelts) are found through Questie too, and on Classic / Forever through the tooltip's quest lines.
+- MiniAuras: BitsjUI notices when MiniAuras is installed and offers to open the setup.
+
+## Fixed
+- Spell timers on target, focus and party frames sometimes showed auras from a previous target.
+- The quest window cut its text off.
+- The /bui menu couldn't be closed or minimized in combat.
+- Unit frame borders: the rounded corners are filled and the small gaps around the frames are gone.
+
 # BitsjUI 1.3.1
 
 ## New

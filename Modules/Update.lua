@@ -24,6 +24,16 @@ local notified = {}      -- version -> true (notice shown this session)
 -- Changelog: newest first. Shown once after updating to that version.
 -------------------------------------------------------------------------------
 B.CHANGELOG = {
+	{ "1.4.0", {
+		"Ready for the WoW Forever launch: the melee and off-hand swing timer uses the new swing events and fades out of range. New empty bag-slot icons are hidden.",
+		"Damage meter: its own settings window (gear on the meter, or /bui meter) with text, font, outline, colours, title bar and update rates. Title bar buttons are icons now.",
+		"Nameplates: quest mobs are purple, and mobs for quest items (like pelts) are found through Questie too.",
+		"MiniAuras: BitsjUI notices when it's installed and offers to open the setup.",
+		"Fixed: spell timers sometimes showed auras from a previous target.",
+		"Fixed: the quest window cut its text off.",
+		"Fixed: the /bui menu couldn't be closed or minimized in combat.",
+		"Fixed: unit frame borders have filled rounded corners and no small gaps.",
+	} },
 	{ "1.3.1", {
 		"Nameplates: switches for friendly player and friendly NPC nameplates (/bui > Nameplates).",
 		"Nameplates: neutral mobs have their own colour now (no longer the same yellow as rogues), and you can change it under Mob colours.",
