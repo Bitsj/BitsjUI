@@ -145,6 +145,7 @@ function M.IsQuestUnit(unit)
 		local ok, v = pcall(api, unit)
 		found = ok and B.Plain(v, false) == true
 	end
+	if not found then found = M.QuestieSaysQuest(guid) end
 	if not found and C_TooltipInfo and C_TooltipInfo.GetUnit then
 		local ok, data = pcall(C_TooltipInfo.GetUnit, unit)
 		if ok and type(data) == "table" and type(data.lines) == "table" then
@@ -161,6 +162,30 @@ function M.IsQuestUnit(unit)
 	return found
 end
 function M.ClearQuestCache() wipe(questCache) end
+
+-- Questie (Classic / Forever) knows every mob you still need, also for item
+-- drops like "Mountain Cougar Pelt", which the game itself doesn't mark.
+-- Same lookup the Plater nameplate addon uses: QuestieTooltips.lookupByKey["m_<npcID>"].
+function M.QuestieSaysQuest(guid)
+	if not guid or not _G.QuestieLoader then return false end
+	local ok, QT = pcall(_G.QuestieLoader.ImportModule, _G.QuestieLoader, "QuestieTooltips")
+	if not ok or type(QT) ~= "table" or type(QT.lookupByKey) ~= "table" then return false end
+	local kind, _, _, _, _, npcID = strsplit("-", guid)
+	if kind ~= "Creature" and kind ~= "Vehicle" then return false end
+	local list = npcID and QT.lookupByKey["m_" .. npcID]
+	if type(list) ~= "table" then return false end
+	local okP, QP = pcall(_G.QuestieLoader.ImportModule, _G.QuestieLoader, "QuestiePlayer")
+	local log = okP and type(QP) == "table" and QP.currentQuestlog
+	for _, entry in pairs(list) do
+		local o = type(entry) == "table" and entry.objective
+		if type(o) == "table" and (not log or log[entry.questId]) then
+			local done = o.Completed == true
+				or (type(o.Needed) == "number" and type(o.Collected) == "number" and o.Needed > 0 and o.Collected >= o.Needed)
+			if not done then return true end
+		end
+	end
+	return false
+end
 
 -- quest > caster > melee; anything else returns nil (keeps the reaction colour).
 -- Casters are told apart by their mana bar (the method coloured-plate addons
@@ -1056,7 +1081,18 @@ local function OnEvent(_, event, unit)
 		for _, np in pairs(active) do UpdateTarget(np) end
 		return
 	end
-	if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" then wipe(questCache) end
+	if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" then
+		wipe(questCache)
+		-- Questie updates its counts right after the game does: look once more
+		if not M.questRecheck then
+			M.questRecheck = true
+			C_Timer.After(0.5, function()
+				M.questRecheck = false
+				wipe(questCache)
+				for _, np in pairs(active) do B:Try(UpdateHealth, np) end
+			end)
+		end
+	end
 	if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_SPECIALIZATION_CHANGED" then
 		for _, np in pairs(active) do B:Try(UpdateHealth, np) end
 		return
