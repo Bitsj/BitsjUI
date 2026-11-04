@@ -130,16 +130,44 @@ local function UF() return B:GetModule("UnitFrames") end
 -------------------------------------------------------------------------------
 -- Pieces
 -------------------------------------------------------------------------------
+-- Is this mob part of one of your quests? Asked two ways: the quest log API,
+-- and (Classic / Forever, where that one can miss mobs) the quest lines the
+-- game adds to the unit's tooltip ("Mountain Cougar slain: 3/10").
+-- Cached per mob and cleared whenever the quest log changes.
+local questCache = {}
+local QUEST_LINES = { [8] = true, [17] = true, [18] = true }   -- QuestObjective, QuestTitle, QuestPlayer
+function M.IsQuestUnit(unit)
+	local guid = B.Plain(UnitGUID(unit), nil)
+	if guid and questCache[guid] ~= nil then return questCache[guid] end
+	local found = false
+	local api = C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest
+	if api then
+		local ok, v = pcall(api, unit)
+		found = ok and B.Plain(v, false) == true
+	end
+	if not found and C_TooltipInfo and C_TooltipInfo.GetUnit then
+		local ok, data = pcall(C_TooltipInfo.GetUnit, unit)
+		if ok and type(data) == "table" and type(data.lines) == "table" then
+			local T = Enum and Enum.TooltipDataLineType
+			local types = T and { [T.QuestObjective or 8] = true, [T.QuestTitle or 17] = true, [T.QuestPlayer or 18] = true } or QUEST_LINES
+			for _, line in ipairs(data.lines) do
+				local t = B.Plain(line.type, nil)
+				-- an objective you've already finished doesn't count
+				if t and types[t] and not B.Plain(line.completed, false) then found = true; break end
+			end
+		end
+	end
+	if guid then questCache[guid] = found end
+	return found
+end
+function M.ClearQuestCache() wipe(questCache) end
+
 -- quest > caster > melee; anything else returns nil (keeps the reaction colour).
 -- Casters are told apart by their mana bar (the method coloured-plate addons
 -- use in Midnight); melee = other elites, so normal trash stays red.
 function M.MobType(unit)
 	if not db().colorByType or B.Plain(UnitIsPlayer(unit), true) then return end
-	local quest = C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest
-	if quest then
-		local ok, v = pcall(quest, unit)
-		if ok and B.Plain(v, false) == true then return "quest" end
-	end
+	if M.IsQuestUnit(unit) then return "quest" end
 	local cl = B.Plain(UnitClassification(unit), "normal")
 	local elite = cl == "elite" or cl == "rareelite" or cl == "worldboss"
 	local ok, pt = pcall(UnitPowerType, unit)
@@ -1028,7 +1056,8 @@ local function OnEvent(_, event, unit)
 		for _, np in pairs(active) do UpdateTarget(np) end
 		return
 	end
-	if event == "QUEST_LOG_UPDATE" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_SPECIALIZATION_CHANGED" then
+	if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" then wipe(questCache) end
+	if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_SPECIALIZATION_CHANGED" then
 		for _, np in pairs(active) do B:Try(UpdateHealth, np) end
 		return
 	end
@@ -1067,7 +1096,7 @@ local EVENTS = {
 	"NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "RAID_TARGET_UPDATE",
 	"UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_NAME_UPDATE", "UNIT_LEVEL", "UNIT_FACTION", "UNIT_THREAT_LIST_UPDATE",
 	"UNIT_THREAT_SITUATION_UPDATE", "UNIT_CLASSIFICATION_CHANGED", "QUEST_LOG_UPDATE", "PLAYER_REGEN_ENABLED",
-	"PLAYER_SPECIALIZATION_CHANGED",
+	"PLAYER_SPECIALIZATION_CHANGED", "UNIT_QUEST_LOG_CHANGED",
 	"UNIT_SPELLCAST_START", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_SPELLCAST_CHANNEL_UPDATE",
 	"UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_EMPOWER_UPDATE", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_CHANNEL_STOP",
 	"UNIT_SPELLCAST_EMPOWER_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED",
