@@ -153,15 +153,16 @@ function M:ApplyTo(db)
 
 end
 
--- one-time question after login. A small frame of our own instead of a
--- StaticPopup, so the Yes button can be a secure /reload button.
+-- popup when BitsjUI finds MiniAuras (newly installed, or our layout for it
+-- changed). It opens the installer at its MiniAuras step, which does the
+-- setup and ends with the reload.
 local prompt
 function M:ShowPrompt()
 	local W = B.Widgets
 	if not W or InCombatLockdown() then return end
 	if not prompt then
 		prompt = CreateFrame("Frame", "BitsjUIMiniAurasPrompt", UIParent)
-		prompt:SetSize(340, 120)
+		prompt:SetSize(380, 130)
 		prompt:SetPoint("TOP", 0, -160)
 		prompt:SetFrameStrata("DIALOG")
 		prompt:EnableMouse(true)
@@ -175,31 +176,66 @@ function M:ShowPrompt()
 		text:SetPoint("TOPRIGHT", -14, -14)
 		text:SetJustifyH("CENTER")
 		text:SetWordWrap(true)
-		text:SetText("BitsjUI found MiniAuras.\nSet it up to fit BitsjUI's party and raid frames?\n(Reloads the UI.)")
-		local yes = W.ReloadButton(prompt, YES or "Yes", 120, 26, function() M:ApplyLayout() end)
-		yes:SetPoint("BOTTOMRIGHT", prompt, "BOTTOM", -6, 14)
-		local no = W.Button(prompt, NO or "No", 120, 26, function()
-			B.global.miniAurasDeclined = true   -- don't ask again
+		prompt.text = text
+		local open = W.Button(prompt, "Open setup", 110, 26, function()
 			prompt:Hide()
+			if B.Installer then B.Installer:Show("miniauras") end
 		end)
-		no:SetPoint("BOTTOMLEFT", prompt, "BOTTOM", 6, 14)
+		open:SetPoint("BOTTOMRIGHT", prompt, "BOTTOM", -61, 14)
+		prompt.open = open
+		local later = W.Button(prompt, "Not now", 110, 26, function()
+			prompt:Hide()   -- asked again next login
+		end)
+		later:SetPoint("BOTTOM", prompt, "BOTTOM", 0, 14)
+		local never = W.Button(prompt, "Don't ask", 110, 26, function()
+			B.global.miniAurasDeclined = true
+			prompt:Hide()
+			B:Print("Set up MiniAuras any time in /bui > Party & raid, or with /bui install.")
+		end)
+		never:SetPoint("BOTTOMLEFT", prompt, "BOTTOM", 61, 14)
+	end
+	if B.global.miniAurasStyled then
+		prompt.text:SetText("BitsjUI's MiniAuras layout has been updated.\nOpen the setup to apply it to your party frames?")
+	else
+		prompt.text:SetText("BitsjUI found |cffffffffMiniAuras|r!\nOpen the setup to fit its crowd control, defensive and interrupt tracking to BitsjUI's party frames?")
 	end
 	prompt:Show()
 end
 
 function M:OnEnable()
-	if not _G.MiniAurasApi then return end
+	if not _G.MiniAurasApi then
+		-- not installed / disabled: ask again if it shows up later
+		B.global.miniAurasSeen = nil
+		return
+	end
 	-- MiniAuras ships LibSharedMedia; make sure our fonts are in it
 	B:RegisterSharedMedia()
 	RegisterProvider()
-	if (B.global.miniAurasLayout or 0) < M.LAYOUT_VERSION and not B.global.miniAurasDeclined then
-		C_Timer.After(6, function()
-			-- first-time setup asks about MiniAuras itself
-			local inst = _G.BitsjUIInstaller
-			if not B.global.installed or (inst and inst:IsShown()) then return end
-			if M:Available() and not InCombatLockdown() then
-				M:ShowPrompt()
-			end
-		end)
+	-- newly found (first time, or installed again after being removed):
+	-- a fresh "Don't ask" is not carried over from the old install
+	local isNew = not B.global.miniAurasSeen
+	if isNew and not B.global.miniAurasStyled then B.global.miniAurasDeclined = nil end
+	local outdated = (B.global.miniAurasLayout or 0) < M.LAYOUT_VERSION
+	if not outdated or B.global.miniAurasDeclined then
+		B.global.miniAurasSeen = true
+		return
 	end
+	C_Timer.After(6, function()
+		-- first-time setup asks about MiniAuras itself
+		local inst = _G.BitsjUIInstaller
+		if not B.global.installed or (inst and inst:IsShown()) then return end
+		-- MiniAuras writes its settings on its first login; until then try next time
+		if not M:Available() then return end
+		B.global.miniAurasSeen = true
+		if InCombatLockdown() then
+			local f = CreateFrame("Frame")
+			f:RegisterEvent("PLAYER_REGEN_ENABLED")
+			f:SetScript("OnEvent", function(self)
+				self:UnregisterAllEvents()
+				M:ShowPrompt()
+			end)
+		else
+			M:ShowPrompt()
+		end
+	end)
 end

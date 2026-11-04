@@ -63,6 +63,7 @@ local steps = {
 	},
 	{
 		-- optional: party tracking comes from MiniAuras (formerly MiniCC)
+		key = "miniauras",
 		title = "Party tracking (optional)",
 		text = function()
 			if _G.MiniAurasApi then
@@ -180,9 +181,15 @@ local function Create()
 	frame.fill:SetHeight(3)
 end
 
-function Installer:Show()
+-- key (optional): open straight at that step, e.g. "miniauras"
+function Installer:Show(key)
 	if not frame then Create() end
 	step = 1
+	if key then
+		for i, s in ipairs(steps) do
+			if s.key == key then step = i break end
+		end
+	end
 	Render()
 	frame:Show()
 end
