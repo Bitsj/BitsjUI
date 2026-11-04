@@ -612,81 +612,6 @@ pages[#pages + 1] = { key = "cdm", label = "Cooldown Manager", build = function(
 	ReloadNotice(lay)
 end }
 
-pages[#pages + 1] = { key = "meter", label = "Damage meter", build = function(lay, rebuild)
-	local DMM = B:GetModule("DamageMeter")
-	lay:Header("Damage meter")
-	if B.isClassic then
-		lay:Text("Reads the combat log, like Details: damage, healing, absorbs, interrupts, dispels, damage taken, deaths and damage per enemy. Pets and totems count for their owner. A fight ends when your whole group leaves combat and is named after the enemy that took the most damage. Title bar buttons: M = display, S = fight, X = reset, R = report.")
-	else
-		lay:Text("Built on Blizzard's built-in damage meter data (Midnight no longer gives addons the combat log). Numbers are hidden from addons in combat, so percentages and chat reports appear when the fight is over. Title bar buttons: M = display, S = fight, X = reset, R = report. Hover a player for a spell breakdown.")
-	end
-	O.check(lay, "Enable BitsjUI damage meter *", "meter.enabled", "DamageMeter")
-	O.check(lay, "Hide Blizzard's meter window", "meter.hideBlizzard", "DamageMeter")
-	O.slider(lay, "Update rate in combat (sec)", "meter.updateInterval", 0.1, 2, 0.1, "DamageMeter", "%.1f")
-	O.check(lay, "Jump to the current fight when combat starts", "meter.autoCurrent", "DamageMeter")
-	lay:Add(W.Text(lay.content, "Hover a player for every spell (trinkets, racials, pets). Left-click opens the full breakdown. Right-click a bar or scroll on the title to step through fights; < > in the title do the same."), true)
-	lay:Add(W.Dropdown(lay.content, "Preset", DMM.PRESETS,
-		function() return B.db.meter.preset end,
-		function(v) DMM:ApplyPreset(v); rebuild() end,
-		"Sets the look of all windows. You can tweak everything afterwards."))
-
-	lay:Header("Choose window")
-	lay:Add(W.Dropdown(lay.content, "Window", {
-		{ value = 1, label = "Window 1" }, { value = 2, label = "Window 2" }, { value = 3, label = "Window 3" },
-	}, function() return state.meter or 1 end, function(v) state.meter = v; rebuild() end))
-	lay:NewLine()
-	local p = "meter.windows." .. (state.meter or 1) .. "."
-	O.check(lay, "Show window", p .. "enabled", "DamageMeter")
-	O.dropdown(lay, "Display", p .. "meterType", DMM.TYPES, "DamageMeter")
-	lay:Add(W.Dropdown(lay.content, "Fight", DMM.SESSIONS,
-		function() return B:GetPath(p .. "sessionType") end,
-		function(v)
-			B:SetPath(p .. "sessionType", v)
-			B:SetPath(p .. "sessionID", nil)
-			DMM:Update()
-		end))
-	O.dropdown(lay, "Visibility", p .. "visibility", {
-		{ value = "always", label = "Always" },
-		{ value = "combat", label = "In combat only" },
-		{ value = "group", label = "In a group only" },
-	}, "DamageMeter")
-
-	lay:Header("Text")
-	O.dropdown(lay, "Number format", p .. "textFormat", {
-		{ value = "both", label = "Total (per second)" },
-		{ value = "total", label = "Total only" },
-		{ value = "persec", label = "Per second only" },
-	}, "DamageMeter")
-	O.slider(lay, "Text size", p .. "fontSize", 8, 20, 1, "DamageMeter")
-	O.check(lay, "Show percent", p .. "showPercent", "DamageMeter")
-	O.check(lay, "Show rank (1. 2. 3.)", p .. "showRank", "DamageMeter")
-	O.check(lay, "Always show me", p .. "alwaysShowMe", "DamageMeter", "If you're below the visible rows, you're shown at the bottom.")
-	O.check(lay, "Show title bar", p .. "showTitle", "DamageMeter")
-
-	lay:Header("Bars")
-	O.check(lay, "Class colours", p .. "classColors", "DamageMeter")
-	O.check(lay, "Spec icons", p .. "showIcons", "DamageMeter")
-	O.slider(lay, "Bar height", p .. "barHeight", 10, 40, 1, "DamageMeter")
-	O.slider(lay, "Spacing", p .. "barSpacing", 0, 8, 1, "DamageMeter")
-	O.slider(lay, "Bar opacity", p .. "barAlpha", 0.1, 1, 0.05, "DamageMeter", "%.2f")
-	O.slider(lay, "Bar background", p .. "barBgAlpha", 0, 1, 0.05, "DamageMeter", "%.2f")
-	O.dropdown(lay, "Texture", p .. "texture", function()
-		local out = { { value = "", label = "Same as the rest of the UI" } }
-		for _, o in ipairs(TextureOptions()) do out[#out + 1] = o end
-		return out
-	end, "DamageMeter")
-	lay:NewLine()
-
-	lay:Header("Window")
-	O.slider(lay, "Width", p .. "width", 140, 900, 1, "DamageMeter")
-	O.slider(lay, "Height", p .. "height", 60, 900, 1, "DamageMeter")
-	O.slider(lay, "Background", p .. "bgAlpha", 0, 1, 0.05, "DamageMeter", "%.2f")
-	O.check(lay, "Fade out of combat", p .. "fadeOOC", "DamageMeter")
-	O.slider(lay, "Opacity out of combat", p .. "fadeAlpha", 0, 1, 0.05, "DamageMeter", "%.2f")
-	lay:Text("Move the window by dragging its title bar (or in move mode). Resize from the bottom-right corner. Scroll with the mouse wheel to see more.")
-	ReloadNotice(lay)
-end }
-
 pages[#pages + 1] = { key = "minimap", label = "Minimap", build = function(lay)
 	lay:Header("Minimap")
 	O.check(lay, "Style the minimap *", "minimap.enabled", "Minimap")
@@ -909,7 +834,7 @@ end }
 
 pages[#pages + 1] = { key = "about", label = "Help", build = function(lay)
 	lay:Header(B:TitleText() .. "  v" .. B.version)
-	lay:Text("Commands:\n/bui  - open this menu\n/bui move  - unlock / lock frames (drag and drop)\n/bui reset  - reset all positions\n/bui errors  - show caught errors\n/bui install  - run the setup again\n/bui delete <name>  - delete a profile\n/bui version  - your version and the newest one seen\n/bui whatsnew  - what changed in this version\n/rl  - reload the UI")
+	lay:Text("Commands:\n/bui  - open this menu\n/bui move  - unlock / lock frames (drag and drop)\n/bui reset  - reset all positions\n/bui errors  - show caught errors\n/bui meter  - damage meter settings (or the gear on the meter)\n/bui install  - run the setup again\n/bui delete <name>  - delete a profile\n/bui version  - your version and the newest one seen\n/bui whatsnew  - what changed in this version\n/rl  - reload the UI")
 	lay:Header("Updates")
 	lay:Text("Addons can't go online, so BitsjUI hears about new versions from other BitsjUI users in your guild and group (a hidden addon message). Install updates with the CurseForge / Wago app, then /reload.")
 	O.check(lay, "Tell me when a newer version is out", "general.updateNotify", "Update")
@@ -1520,6 +1445,8 @@ SlashCmdList.BITSJUI = function(msg)
 		B:Print("BitsjUI errors logged: " .. errs .. " (/bui errors)")
 	elseif cmd == "npdebug" then
 		B:GetModule("Nameplates"):ShowDebug()
+	elseif cmd == "meter" or cmd == "dm" then
+		if B.MeterOptions then B.MeterOptions:Show() end
 	elseif cmd == "fonts" then
 		-- which font files the game can load. Checks every second for 15 seconds
 		-- (fonts load in the background), then prints one line per font.

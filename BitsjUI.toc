@@ -48,4 +48,5 @@ Modules\Quests.lua
 Modules\Update.lua
 Config\Widgets.lua
 Config\Config.lua
+Config\MeterOptions.lua
 Config\Installer.lua

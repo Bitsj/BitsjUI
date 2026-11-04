@@ -51,6 +51,11 @@ local function cfg(i) return B.db.meter.windows[i] end
 -------------------------------------------------------------------------------
 local function Short(v)
 	if not issecret(v) and v == nil then return "" end
+	-- full numbers (12,345,678) when chosen in the meter settings
+	if B.db.meter.numberStyle == "full" and BreakUpLargeNumbers then
+		local ok, r = pcall(BreakUpLargeNumbers, v)
+		if ok and (issecret(r) or (type(r) == "string" and r ~= "")) then return r end
+	end
 	if AbbreviateNumbers then
 		local ok, r = pcall(AbbreviateNumbers, v)
 		if ok and (issecret(r) or (type(r) == "string" and r ~= "")) then return r end
@@ -60,6 +65,21 @@ local function Short(v)
 	elseif v >= 1e6 then return string.format("%.2fM", v / 1e6)
 	elseif v >= 1e3 then return string.format("%.1fK", v / 1e3) end
 	return string.format("%.0f", v)
+end
+
+-- text outline / shadow per window ("default" follows the UI's outline setting)
+function M.Outline(c)
+	local o = c and c.textOutline or "default"
+	if o == "default" or o == nil then return B:GetOutline() end
+	if o == "NONE" then o = "" end
+	return B:Flags(o)
+end
+function M.Shadow(fs, c)
+	if c and c.textShadow then
+		fs:SetShadowColor(0, 0, 0, 1); fs:SetShadowOffset(1, -1)
+	else
+		fs:SetShadowOffset(0, 0)
+	end
 end
 
 local function Percent(part, total)
@@ -184,8 +204,10 @@ local function StyleRow(win, row, i)
 	row:SetPoint("TOPLEFT", win.content, "TOPLEFT", 0, -(i - 1) * (c.barHeight + c.barSpacing))
 	row:SetPoint("TOPRIGHT", win.content, "TOPRIGHT", 0, -(i - 1) * (c.barHeight + c.barSpacing))
 	local font = GetFont()
-	row.left:SetFont(font, c.fontSize, B:GetOutline())
-	row.right:SetFont(font, c.fontSize, B:GetOutline())
+	local outline = M.Outline(c)
+	row.left:SetFont(font, c.fontSize, outline)
+	row.right:SetFont(font, c.fontSize, outline)
+	M.Shadow(row.left, c); M.Shadow(row.right, c)
 	row.icon:SetSize(c.barHeight, c.barHeight)
 	row.icon:ClearAllPoints()
 	row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -218,7 +240,8 @@ local function FillRow(win, row, src, rank, session)
 	-- colours
 	local class = B.Plain(src.classFilename, nil)
 	local r, g, b = 0.5, 0.5, 0.55
-	if c.classColors and class then r, g, b = B:ClassColor(class) end
+	if c.classColors and class then r, g, b = B:ClassColor(class)
+	elseif c.barColor then r, g, b = c.barColor.r, c.barColor.g, c.barColor.b end
 	row:SetStatusBarColor(r, g, b, c.barAlpha)
 	row.bg:SetVertexColor(r * 0.3, g * 0.3, b * 0.3, c.barBgAlpha)
 
@@ -247,8 +270,8 @@ local function FillRow(win, row, src, rank, session)
 		leftOK = pcall(row.left.SetText, row.left, name)
 	end
 	if not leftOK then row.left:SetText(c.showRank and (rank .. ".") or "") end
-	-- always white: the bar behind is already in the class colour
-	row.left:SetTextColor(1, 1, 1)
+	-- names white by default (the bar is already class coloured), or in class colour
+	if c.nameColor == "class" and class then row.left:SetTextColor(B:ClassColor(class)) else row.left:SetTextColor(1, 1, 1) end
 
 	-- right: amount (per second) [percent]
 	local total, persec = Short(src.totalAmount), Short(src.amountPerSecond)
@@ -331,14 +354,19 @@ function M:Layout(win)
 	win:SetSize(c.width, c.height)
 	local pr, pg, pb = B:PanelColor()
 	win.bg:SetColorTexture(pr * 0.8, pg * 0.8, pb * 0.8, c.bgAlpha)
-	local titleH = c.showTitle and 22 or 0
+	local titleH = c.showTitle and (c.titleHeight or 22) or 0
 	win.titleBar:SetShown(c.showTitle)
 	win.titleBar:SetHeight(math.max(1, titleH))
 	win.content:ClearAllPoints()
 	win.content:SetPoint("TOPLEFT", win, "TOPLEFT", 2, -(titleH + 2))
 	win.content:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -2, 2)
-	win.title:SetFont(GetFont(), 12, B:Flags(""))
-	for _, b in ipairs(win.buttons) do b.text:SetFont(GetFont(), 12, B:Flags("")) end
+	win.title:SetFont(GetFont(), c.titleFontSize or 12, M.Outline(c))
+	M.Shadow(win.title, c)
+	local iconSize = math.max(10, math.min(18, (c.titleHeight or 22) - 8))
+	for _, b in ipairs(win.buttons) do
+		b:SetSize(iconSize + 6, math.max(14, (c.titleHeight or 22) - 2))
+		b.icon:SetSize(iconSize, iconSize)
+	end
 	win.notice:SetFont(GetFont(), 12, B:Flags(""))
 	B:SetMoverEnabled("meter" .. win.id, c.enabled)
 	B.Movers:Apply("meter" .. win.id)
@@ -346,21 +374,23 @@ function M:Layout(win)
 	self:Refresh(win)
 end
 
-local function TitleButton(win, text, tooltip, onClick)
+-- title bar button with an icon (Media\Textures\Meter\<icon>.tga)
+local ICON_PATH = B.mediaPath .. "Textures\\Meter\\"
+local function TitleButton(win, icon, tooltip, onClick)
 	local b = CreateFrame("Button", nil, win.titleBar)
 	b:SetSize(20, 20)
-	b.text = b:CreateFontString(nil, "OVERLAY")
-	b.text:SetFont(GetFont(), 12, B:Flags(""))
-	b.text:SetPoint("CENTER")
-	b.text:SetText(text)
-	b.text:SetTextColor(0.7, 0.72, 0.75)
+	b.icon = b:CreateTexture(nil, "OVERLAY")
+	b.icon:SetPoint("CENTER")
+	b.icon:SetSize(14, 14)
+	b.icon:SetTexture(ICON_PATH .. icon)
+	b.icon:SetVertexColor(0.7, 0.72, 0.75)
 	b:SetScript("OnEnter", function(self)
-		self.text:SetTextColor(B:AccentColor())
+		self.icon:SetVertexColor(B:AccentColor())
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
 		GameTooltip:AddLine(tooltip, 1, 1, 1)
 		GameTooltip:Show()
 	end)
-	b:SetScript("OnLeave", function(self) self.text:SetTextColor(0.7, 0.72, 0.75); GameTooltip:Hide() end)
+	b:SetScript("OnLeave", function(self) self.icon:SetVertexColor(0.7, 0.72, 0.75); GameTooltip:Hide() end)
 	b:SetScript("OnClick", onClick)
 	win.buttons[#win.buttons + 1] = b
 	return b
@@ -408,15 +438,17 @@ local function CreateWindow(i)
 	win.title:SetJustifyH("LEFT")
 	win.title:SetWordWrap(false)
 
-	local report = TitleButton(win, "R", "Report to chat", function(self) M:OpenReport(win, self) end)
-	report:SetPoint("RIGHT", tb, "RIGHT", -2, 0)
-	local reset = TitleButton(win, "X", "Reset all fights", function() StaticPopup_Show("BITSJUI_METER_RESET") end)
+	local settings = TitleButton(win, "Settings", "Damage meter settings", function() M:OpenSettings(i) end)
+	settings:SetPoint("RIGHT", tb, "RIGHT", -2, 0)
+	local report = TitleButton(win, "Report", "Report to chat", function(self) M:OpenReport(win, self) end)
+	report:SetPoint("RIGHT", settings, "LEFT", 0, 0)
+	local reset = TitleButton(win, "Reset", "Reset all fights", function() StaticPopup_Show("BITSJUI_METER_RESET") end)
 	reset:SetPoint("RIGHT", report, "LEFT", 0, 0)
-	local seg = TitleButton(win, "S", "Choose fight (segment)", function(self)
+	local seg = TitleButton(win, "Segment", "Choose fight (segment)", function(self)
 		B.Widgets.OpenList(self, SessionOptions(), CurrentValue(cfg(i)), function(value) M:SetSegment(win, value) end, 240)
 	end)
 	seg:SetPoint("RIGHT", reset, "LEFT", 0, 0)
-	local mode = TitleButton(win, "M", "Choose display", function(self)
+	local mode = TitleButton(win, "Display", "Choose display (damage, healing, ...)", function(self)
 		B.Widgets.OpenList(self, M.TYPES, cfg(i).meterType, function(value)
 			cfg(i).meterType = value
 			win.offset = 0
@@ -424,9 +456,9 @@ local function CreateWindow(i)
 		end, 200)
 	end)
 	mode:SetPoint("RIGHT", seg, "LEFT", 0, 0)
-	local nextSeg = TitleButton(win, ">", "Next fight (or scroll the mouse wheel over the title)", function() M:StepSegment(win, 1) end)
+	local nextSeg = TitleButton(win, "Next", "Next fight (or scroll the mouse wheel over the title)", function() M:StepSegment(win, 1) end)
 	nextSeg:SetPoint("RIGHT", mode, "LEFT", -2, 0)
-	local prevSeg = TitleButton(win, "<", "Previous fight", function() M:StepSegment(win, -1) end)
+	local prevSeg = TitleButton(win, "Prev", "Previous fight", function() M:StepSegment(win, -1) end)
 	prevSeg:SetPoint("RIGHT", nextSeg, "LEFT", 0, 0)
 	win.title:SetPoint("RIGHT", prevSeg, "LEFT", -4, 0)
 	tb:EnableMouseWheel(true)
@@ -463,7 +495,7 @@ local function CreateWindow(i)
 	win.elapsed = 0
 	win:SetScript("OnUpdate", B.Safe(function(self, el)
 		self.elapsed = self.elapsed + el
-		local interval = InCombatLockdown() and B.db.meter.updateInterval or 1
+		local interval = InCombatLockdown() and B.db.meter.updateInterval or (B.db.meter.updateIntervalOOC or 1)
 		if self.elapsed < interval then return end
 		self.elapsed = 0
 		M:Refresh(self)
@@ -848,6 +880,11 @@ M.PRESETS = {
 	{ value = "classic", label = "Classic" },
 	{ value = "minimal", label = "Minimal" },
 }
+
+-- the meter's own settings window (Config\MeterOptions.lua)
+function M:OpenSettings(win)
+	if B.MeterOptions then B.MeterOptions:Show(win) end
+end
 
 function M:ApplyPreset(key)
 	for i = 1, 3 do

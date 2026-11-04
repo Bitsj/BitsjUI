@@ -332,6 +332,8 @@ B.defaults = {
 	meter = {
 		enabled = true,
 		updateInterval = 0.5,
+		updateIntervalOOC = 1,        -- refresh out of combat
+		numberStyle = "short",        -- short (12.3K) | full (12,345)
 		autoCurrent = true,           -- new fight: windows showing an old fight jump back to Current
 		hideBlizzard = true,
 		preset = "dark",
@@ -349,6 +351,8 @@ local function meterWindow(enabled, meterType)
 		textFormat = "both", showPercent = true, alwaysShowMe = true,
 		visibility = "always", fadeOOC = false, fadeAlpha = 0.5,
 		bgAlpha = 0.85, barAlpha = 0.9, barBgAlpha = 0.35, texture = "",
+		textOutline = "default", textShadow = false, nameColor = "white",
+		titleFontSize = 12, titleHeight = 22, barColor = { r = 0.45, g = 0.55, b = 0.75 },
 	}
 end
 B.defaults.meter.windows[1] = meterWindow(true, 0)
