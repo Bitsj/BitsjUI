@@ -444,8 +444,35 @@ local function LayoutBorder(holder)
 			cc[i]:SetSize(c, c)
 			cc[i]:Show()
 		end
+		-- fill the frame's own corners outside the ring's inner curve, so
+		-- square bars inside don't poke out past the rounded border
+		local inner = math.min(7, R - thick)
+		if inner >= 1 then
+			if not holder.bFillet then
+				holder.bFillet = {}
+				for i = 1, 4 do
+					local ft = holder:CreateTexture(nil, t[1]:GetDrawLayer(), nil, 7)
+					ft:SetTexCoord(unpack(CORNER_COORDS[i]))
+					local col = holder.bColor
+					ft:SetVertexColor(col[1], col[2], col[3], col[4])
+					holder.bFillet[i] = ft
+				end
+			end
+			local f = holder.bFillet
+			local fs = inner * px
+			for i = 1, 4 do
+				f[i]:SetTexture(path .. "Textures\\Corners\\F" .. inner)
+				f[i]:ClearAllPoints()
+				f[i]:SetPoint(pts[i][1], frame, pts[i][1], 0, 0)
+				f[i]:SetSize(fs, fs)
+				f[i]:Show()
+			end
+		elseif holder.bFillet then
+			for i = 1, 4 do holder.bFillet[i]:Hide() end
+		end
 	elseif holder.bCorner then
 		for i = 1, 4 do holder.bCorner[i]:Hide() end
+		if holder.bFillet then for i = 1, 4 do holder.bFillet[i]:Hide() end end
 	end
 end
 
@@ -473,6 +500,9 @@ function B:CreateBorder(frame, r, g, b, a, offset, layer)
 		for i = 1, 4 do self.bTex[i]:SetVertexColor(cr, cg, cb, ca or 1) end
 		if self.bCorner then
 			for i = 1, 4 do self.bCorner[i]:SetVertexColor(cr, cg, cb, ca or 1) end
+		end
+		if self.bFillet then
+			for i = 1, 4 do self.bFillet[i]:SetVertexColor(cr, cg, cb, ca or 1) end
 		end
 	end
 	LayoutBorder(holder)

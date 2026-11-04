@@ -696,7 +696,10 @@ function M:LayoutFrame(key)
 	local ps = showPortrait and c.portraitSize or 0
 	local gap = showPortrait and -6 or 0   -- portrait overlaps the bar block slightly
 
-	f:SetSize(c.width + ps + gap, math.max(barsH, ps))
+	-- whole physical pixels everywhere, or the edges blur and leave a hairline
+	-- gap between the bars and the border
+	local function snap(v) return B:Snap(f, v) end
+	f:SetSize(snap(c.width + ps + gap), snap(math.max(barsH, ps)))
 
 	-- portrait
 	f.portraitFrame:ClearAllPoints()
@@ -706,7 +709,7 @@ function M:LayoutFrame(key)
 
 	-- bar block, vertically centered on the portrait
 	f.bars:ClearAllPoints()
-	f.bars:SetSize(c.width, barsH)
+	f.bars:SetSize(snap(c.width), snap(barsH))
 	if showPortrait then
 		f.bars:SetPoint(mirrored and "RIGHT" or "LEFT", f.portraitFrame, mirrored and "LEFT" or "RIGHT", mirrored and -gap or gap, 0)
 	else
@@ -715,12 +718,12 @@ function M:LayoutFrame(key)
 	f.health:ClearAllPoints()
 	f.health:SetPoint("TOPLEFT", f.bars, "TOPLEFT", 0, 0)
 	f.health:SetPoint("TOPRIGHT", f.bars, "TOPRIGHT", 0, 0)
-	f.health:SetHeight(c.healthHeight)
+	f.health:SetHeight(snap(c.healthHeight))
 	if ph > 0 then
 		f.power:ClearAllPoints()
 		f.power:SetPoint("BOTTOMLEFT", f.bars, "BOTTOMLEFT", 0, 0)
 		f.power:SetPoint("BOTTOMRIGHT", f.bars, "BOTTOMRIGHT", 0, 0)
-		f.power:SetHeight(ph)
+		f.power:SetHeight(snap(ph))
 		f.power:Show()
 	else
 		f.power:Hide()
@@ -884,8 +887,13 @@ end
 -- put a frame's `point` at UIParent coordinates x, y (frames can have their own scale)
 local function PlaceAt(f, point, x, y)
 	local k = UIParent:GetEffectiveScale() / f:GetEffectiveScale()
+	local X, Y = x * k, y * k
+	-- put the frame's edges (not its anchor point) on whole pixels
+	local w, h = f:GetSize()
+	if point:find("LEFT") or point:find("RIGHT") then X = B:Snap(f, X) else X = B:Snap(f, X - w / 2) + w / 2 end
+	if point:find("TOP") or point:find("BOTTOM") then Y = B:Snap(f, Y) else Y = B:Snap(f, Y - h / 2) + h / 2 end
 	f:ClearAllPoints()
-	f:SetPoint(point, UIParent, "BOTTOMLEFT", x * k, y * k)
+	f:SetPoint(point, UIParent, "BOTTOMLEFT", X, Y)
 end
 
 function M:FitCDM()
