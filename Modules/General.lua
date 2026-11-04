@@ -68,7 +68,10 @@ function M:ApplyGameFonts()
 			if cur then
 				if not originalFonts[name] then originalFonts[name] = cur end
 				if enabled then
-					obj:SetFont(file, size, B:Flags(flags or ""))
+					-- quest text fades in letter by letter; vector ("sharp") text
+					-- breaks that fade and leaves the text cut off, so not for quest fonts
+					local f = name:find("Quest") and (flags or "") or B:Flags(flags or "")
+					obj:SetFont(file, size, f)
 				elseif originalFonts[name] then
 					obj:SetFont(originalFonts[name], size, flags or "")
 				end
@@ -273,6 +276,21 @@ local function Welcome()
 	B:Print(string.format("Welcome back, %s%s|r - %s%s|r%s.", hex, me.name or "", hex, who, side))
 end
 
+-- Quest windows write the quest text in letter by letter. On some clients the
+-- fade stops early and leaves only the first words visible (the rest stays
+-- see-through). Once Blizzard's fade is done, show the whole text.
+function M:FixQuestText()
+	local panel, text = _G.QuestFrameDetailPanel, _G.QuestInfoDescriptionText
+	if not (panel and text and text.SetAlphaGradient) or panel.bTextFix then return end
+	panel.bTextFix = true
+	panel:HookScript("OnShow", function(self) self.bTextShown = nil end)
+	panel:HookScript("OnUpdate", function(self)
+		if self.fading or self.bTextShown then return end
+		self.bTextShown = true
+		pcall(text.SetAlphaGradient, text, 100000, 1)
+	end)
+end
+
 function M:OnEnable()
 	B:RegisterEvent("PLAYER_ENTERING_WORLD", function(_, isLogin)
 		if isLogin then C_Timer.After(2, Welcome) end
@@ -280,6 +298,7 @@ function M:OnEnable()
 	B:ApplyUIScale()
 	self:ApplyGameFonts()
 	self:Declutter()
+	self:FixQuestText()
 	-- talking head is load-on-demand in some versions
 	B:RegisterEvent("ADDON_LOADED", function(_, name)
 		if name == "Blizzard_TalkingHeadUI" then M:Declutter() end
